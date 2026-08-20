@@ -1,9 +1,9 @@
 import { apiFetch } from './api';
 
-export async function createOrder({ addressText, paymentMethod, notes }) {
+export async function createOrder({ addressText, paymentMethod, notes, items }) {
   const res = await apiFetch('/api/orders', {
     method: 'POST',
-    body: { addressText, paymentMethod, notes },
+    body: { addressText, paymentMethod, notes, items },
     auth: true,
   });
   return res.data;

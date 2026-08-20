@@ -57,6 +57,7 @@ export default function PaymentPage() {
         addressText,
         paymentMethod: method,
         notes,
+        items: items.map((i) => ({ menuItemId: i.productId || i.menuItemId || i.id, quantity: i.quantity })),
       });
 
       setOrderConfirmed({ orderId: order.id, orderNumber: order.orderNumber });

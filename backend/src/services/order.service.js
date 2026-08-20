@@ -1,44 +1,71 @@
 const prisma = require('../config/prisma');
 
 class OrderService {
-  async createOrder(userId, { deliveryAddress, addressText, paymentMethod = 'COD', notes }) {
-    // Fetch cart with items
-    const cart = await prisma.cart.findUnique({
-      where: { userId },
-      include: {
-        items: {
-          include: { menuItem: true },
-        },
-      },
-    });
-
-    if (!cart || cart.items.length === 0) {
-      const error = new Error('Cart is empty. Cannot place an order.');
-      error.statusCode = 400;
-      throw error;
-    }
-
-    // Validate item availability and calculate total server-side
+  async createOrder(userId, { deliveryAddress, addressText, paymentMethod = 'COD', notes, items: payloadItems }) {
+    let orderItemsData = [];
     let subtotal = 0;
-    const orderItemsData = [];
+    let cartIdToDelete = null;
 
-    for (const cartItem of cart.items) {
-      const { menuItem, quantity } = cartItem;
+    if (Array.isArray(payloadItems) && payloadItems.length > 0) {
+      for (const item of payloadItems) {
+        const targetId = item.menuItemId || item.productId || item.id;
+        if (!targetId) continue;
 
-      if (!menuItem || !menuItem.availability) {
-        const error = new Error(`Item "${menuItem ? menuItem.name : 'Unknown'}" is currently unavailable.`);
+        const menuItem = await prisma.menuItem.findUnique({
+          where: { id: targetId },
+        });
+
+        if (!menuItem || !menuItem.availability) {
+          const error = new Error(`Item "${menuItem ? menuItem.name : 'Unknown'}" is currently unavailable.`);
+          error.statusCode = 400;
+          throw error;
+        }
+
+        const quantity = item.quantity || 1;
+        subtotal += menuItem.price * quantity;
+
+        orderItemsData.push({
+          menuItemId: menuItem.id,
+          quantity,
+          price: menuItem.price,
+        });
+      }
+    } else {
+      // Fetch cart with items from database
+      const cart = await prisma.cart.findUnique({
+        where: { userId },
+        include: {
+          items: {
+            include: { menuItem: true },
+          },
+        },
+      });
+
+      if (!cart || cart.items.length === 0) {
+        const error = new Error('Cart is empty. Cannot place an order.');
         error.statusCode = 400;
         throw error;
       }
 
-      const itemTotal = menuItem.price * quantity;
-      subtotal += itemTotal;
+      cartIdToDelete = cart.id;
 
-      orderItemsData.push({
-        menuItemId: menuItem.id,
-        quantity,
-        price: menuItem.price, // Server-side actual price
-      });
+      for (const cartItem of cart.items) {
+        const { menuItem, quantity } = cartItem;
+
+        if (!menuItem || !menuItem.availability) {
+          const error = new Error(`Item "${menuItem ? menuItem.name : 'Unknown'}" is currently unavailable.`);
+          error.statusCode = 400;
+          throw error;
+        }
+
+        subtotal += menuItem.price * quantity;
+
+        orderItemsData.push({
+          menuItemId: menuItem.id,
+          quantity,
+          price: menuItem.price,
+        });
+      }
     }
 
     const tax = Math.round(subtotal * 0.05 * 100) / 100;
@@ -87,8 +114,10 @@ class OrderService {
         },
       });
 
-      // Clear user cart
-      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+      // Clear DB cart if it exists
+      if (cartIdToDelete) {
+        await tx.cartItem.deleteMany({ where: { cartId: cartIdToDelete } });
+      }
 
       return newOrder;
     });

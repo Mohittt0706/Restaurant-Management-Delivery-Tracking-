@@ -6,11 +6,14 @@ const roleMiddleware = require('../middleware/role.middleware');
 
 router.use(authMiddleware);
 
-router.post('/', roleMiddleware('CUSTOMER'), orderController.createOrder);
-router.get('/my', roleMiddleware('CUSTOMER'), orderController.getMyOrders);
-router.get('/:id/tracking', roleMiddleware('CUSTOMER'), orderController.getOrderTracking);
+// Allow any authenticated user (Customer, Manager, Kitchen, Delivery) to place, view, track, or cancel their own orders
+router.post('/', orderController.createOrder);
+router.get('/my', orderController.getMyOrders);
+router.get('/:id/tracking', orderController.getOrderTracking);
 router.get('/:id', orderController.getOrderById);
+router.patch('/:id/cancel', orderController.cancelOrder);
+
+// Only Manager can manually override order status via this endpoint
 router.patch('/:id/status', roleMiddleware('MANAGER'), orderController.updateOrderStatus);
-router.patch('/:id/cancel', roleMiddleware('CUSTOMER'), orderController.cancelOrder);
 
 module.exports = router;

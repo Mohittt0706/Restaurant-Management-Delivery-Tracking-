@@ -1,6 +1,19 @@
+const Razorpay = require('razorpay');
 const prisma = require('../config/prisma');
 const crypto = require('crypto');
 const { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET } = require('../config/env');
+
+let razorpayInstance = null;
+if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET && RAZORPAY_KEY_SECRET !== 'mock_secret_456') {
+  try {
+    razorpayInstance = new Razorpay({
+      key_id: RAZORPAY_KEY_ID,
+      key_secret: RAZORPAY_KEY_SECRET,
+    });
+  } catch (err) {
+    console.error('Failed to initialize Razorpay SDK:', err);
+  }
+}
 
 class PaymentService {
   async createRazorpayOrder(orderId, userId) {
@@ -17,28 +30,48 @@ class PaymentService {
       throw error;
     }
 
-    const mockRazorpayOrderId = 'rzp_order_' + Date.now() + Math.floor(100 + Math.random() * 900);
+    const amountInPaise = Math.round(order.totalAmount * 100);
+    let razorpayOrderId = null;
+
+    if (razorpayInstance) {
+      try {
+        const rpOrder = await razorpayInstance.orders.create({
+          amount: amountInPaise,
+          currency: 'INR',
+          receipt: `rcpt_${order.id.slice(0, 8)}_${Date.now().toString().slice(-4)}`,
+        });
+        razorpayOrderId = rpOrder.id;
+      } catch (err) {
+        console.error('Razorpay Order API error:', err);
+        const errMsg = err?.error?.description || err.message || 'Failed to create order on Razorpay servers';
+        const error = new Error(errMsg);
+        error.statusCode = 400;
+        throw error;
+      }
+    } else {
+      razorpayOrderId = 'rzp_order_' + Date.now() + Math.floor(100 + Math.random() * 900);
+    }
 
     await prisma.payment.upsert({
       where: { orderId },
       update: {
         method: 'RAZORPAY',
         provider: 'RAZORPAY',
-        transactionId: mockRazorpayOrderId,
+        transactionId: razorpayOrderId,
       },
       create: {
         orderId,
         method: 'RAZORPAY',
         amount: order.totalAmount,
         provider: 'RAZORPAY',
-        transactionId: mockRazorpayOrderId,
+        transactionId: razorpayOrderId,
         status: 'PENDING',
       },
     });
 
     return {
-      razorpayOrderId: mockRazorpayOrderId,
-      amount: order.totalAmount * 100, // Amount in paise
+      razorpayOrderId,
+      amount: amountInPaise,
       currency: 'INR',
       keyId: RAZORPAY_KEY_ID,
     };
@@ -52,9 +85,8 @@ class PaymentService {
       throw error;
     }
 
-    // Verify signature if secret provided, else simulate verification
     let isValid = true;
-    if (razorpayOrderId && razorpayPaymentId && razorpaySignature && RAZORPAY_KEY_SECRET !== 'mock_secret_456') {
+    if (razorpayOrderId && razorpayPaymentId && razorpaySignature && RAZORPAY_KEY_SECRET && RAZORPAY_KEY_SECRET !== 'mock_secret_456') {
       const body = razorpayOrderId + '|' + razorpayPaymentId;
       const expectedSignature = crypto
         .createHmac('sha256', RAZORPAY_KEY_SECRET)
