@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
 import Toast from '../components/common/Toast';
+import { useAuth } from '../context/AuthContext';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -10,21 +11,37 @@ export default function Register() {
   const [contact, setContact] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+const [showPassword, setShowPassword] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { register } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!name.trim() || !contact.trim() || !email.trim() || !password.trim()) {
+    if (!name.trim() || !contact.trim() || !email.trim() || !password.trim() || submitting) {
       return;
     }
 
-    // Trigger success notification and automatically redirect to Login page
-    setShowToast(true);
-    setTimeout(() => {
-      navigate('/login');
-    }, 1500);
+setSubmitting(true);
+    setToast(null);
+
+    try {
+      await register({
+        name: name.trim(),
+        phone: contact.trim(),
+        email: email.trim(),
+        password,
+      });
+      setToast({ type: 'success', message: 'Registration Successful' });
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Unable to connect to server. Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -34,9 +51,10 @@ export default function Register() {
 
       {/* Toast Notification (Reused Component) */}
       <Toast
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-        message="Registration Successful"
+        isVisible={!!toast}
+        onClose={() => setToast(null)}
+        message={toast?.message}
+        type={toast?.type}
         duration={3000}
       />
 
@@ -152,9 +170,10 @@ export default function Register() {
           {/* Register Submit Button */}
           <button
             type="submit"
-            className="w-full bg-cult-ember text-cult-cream py-3.5 px-6 font-body text-sm uppercase tracking-widest font-medium hover:bg-cult-deep-red transition-all duration-300 cursor-pointer shadow-lg hover:shadow-cult-ember/20 active:scale-[0.99] mt-2"
+            disabled={submitting}
+            className="w-full bg-cult-ember text-cult-cream py-3.5 px-6 font-body text-sm uppercase tracking-widest font-medium hover:bg-cult-deep-red transition-all duration-300 cursor-pointer shadow-lg hover:shadow-cult-ember/20 active:scale-[0.99] mt-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-cult-ember"
           >
-            Register
+            {submitting ? 'Registering...' : 'Register'}
           </button>
         </form>
       </motion.div>
