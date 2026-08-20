@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -17,37 +17,6 @@ const sidebarLinks = [
   { label: 'Preparing', to: '/kitchen/preparing', icon: ChefHat },
   { label: 'Ready', to: '/kitchen/ready', icon: CheckCircle },
 ];
-
-function LiveClock() {
-  const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const date = now.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  const time = now.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-
-  return (
-    <div className="text-right">
-      <p className="font-body text-sm text-cult-cream">Kitchen Staff</p>
-      <p className="font-body text-xs text-cult-ember">Kitchen</p>
-      <p className="font-body text-xs text-cult-warmgray mt-1">{date}</p>
-      <p className="font-body text-xs text-cult-warmgray">{time}</p>
-    </div>
-  );
-}
 
 export default function KitchenLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -134,7 +103,7 @@ export default function KitchenLayout() {
             <Menu size={22} />
           </button>
           <div className="flex-1" />
-          <LiveClock />
+          <span className="font-display text-xl tracking-widest text-cult-cream">KITCHEN</span>
         </header>
 
         {/* Page Content */}

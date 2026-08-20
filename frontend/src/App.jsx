@@ -14,8 +14,10 @@ import OrderTrackingPage from './pages/OrderTrackingPage';
 import ManagerDashboardPage from './pages/ManagerDashboard/ManagerDashboardPage';
 import DeliveryPartnerDashboardPage from './pages/DeliveryPartnerDashboard/DeliveryPartnerDashboardPage';
 import { CartProvider } from './context/CartContext';
+import { AuthProvider } from './context/AuthContext';
 import { CheckoutProvider } from './context/CheckoutContext';
 import { KitchenProvider } from './context/KitchenContext';
+import OrderHistoryPage from './pages/OrderHistoryPage';
 import KitchenLayout from './pages/kitchen/KitchenLayout';
 import KitchenDashboard from './pages/kitchen/KitchenDashboard';
 import KitchenNewOrders from './pages/kitchen/KitchenNewOrders';
@@ -46,6 +48,7 @@ function Layout() {
         <Route path="/payment" element={<PaymentPage />} />
         <Route path="/invoice" element={<InvoicePage />} />
         <Route path="/orders/:id/tracking" element={<OrderTrackingPage />} />
+        <Route path="/order-history" element={<OrderHistoryPage />} />
         <Route path="/manager" element={<ManagerDashboardPage />} />
         <Route path="/dashboard" element={<ManagerDashboardPage />} />
         <Route
@@ -71,11 +74,13 @@ function Layout() {
 export default function App() {
   return (
     <BrowserRouter>
-      <CartProvider>
-        <CheckoutProvider>
-          <Layout />
-        </CheckoutProvider>
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <CheckoutProvider>
+            <Layout />
+          </CheckoutProvider>
+        </CartProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

@@ -1,22 +1,18 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ShoppingCart } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, User, LogOut, ShoppingBag, Clock, MapPin, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
 import MobileMenu from './MobileMenu';
-
-const navLinks = [
-  { label: 'About', to: '/' },
-  { label: 'Menu', to: '/menu' },
-  { label: 'Login', to: '/login' },
-  { label: 'Register', to: '/register' },
-];
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const location = useLocation();
-  const { itemCount } = useCart();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
+  const profileRef = useRef(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -31,7 +27,34 @@ export default function Navbar() {
 
   useEffect(() => {
     setMobileOpen(false);
+    setProfileOpen(false);
   }, [location]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+    };
+    if (profileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [profileOpen]);
+
+  const handleLogout = () => {
+    logout();
+    setProfileOpen(false);
+    navigate('/');
+  };
+
+  const profileLinks = [
+    { label: 'My Profile', to: '/profile', icon: User },
+    { label: 'My Cart', to: '/cart', icon: ShoppingBag },
+    { label: 'Active Order', to: '/orders/latest/tracking', icon: Clock },
+    { label: 'Order History', to: '/order-history', icon: History },
+    { label: 'Delivery Address', to: '/address', icon: MapPin },
+  ];
 
   return (
     <>
@@ -56,38 +79,117 @@ export default function Navbar() {
 
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-8 lg:gap-10">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  className={`font-body text-sm tracking-widest uppercase transition-colors duration-300 relative group ${
-                    location.pathname === link.to
-                      ? 'text-cult-cream'
-                      : 'text-cult-warmgray hover:text-cult-cream'
-                  }`}
-                >
-                  {link.label}
-                  <span className={`absolute -bottom-1 left-0 h-px bg-cult-ember transition-all duration-300 ${
-                    location.pathname === link.to ? 'w-full' : 'w-0 group-hover:w-full'
-                  }`} />
-                </Link>
-              ))}
+              <Link
+                to="/"
+                className={`font-body text-sm tracking-widest uppercase transition-colors duration-300 relative group ${
+                  location.pathname === '/'
+                    ? 'text-cult-cream'
+                    : 'text-cult-warmgray hover:text-cult-cream'
+                }`}
+              >
+                About
+                <span className={`absolute -bottom-1 left-0 h-px bg-cult-ember transition-all duration-300 ${
+                  location.pathname === '/' ? 'w-full' : 'w-0 group-hover:w-full'
+                }`} />
+              </Link>
+              <Link
+                to="/menu"
+                className={`font-body text-sm tracking-widest uppercase transition-colors duration-300 relative group ${
+                  location.pathname === '/menu'
+                    ? 'text-cult-cream'
+                    : 'text-cult-warmgray hover:text-cult-cream'
+                }`}
+              >
+                Menu
+                <span className={`absolute -bottom-1 left-0 h-px bg-cult-ember transition-all duration-300 ${
+                  location.pathname === '/menu' ? 'w-full' : 'w-0 group-hover:w-full'
+                }`} />
+              </Link>
             </div>
 
-            {/* Cart + Mobile Toggle */}
+            {/* Auth Controls + Mobile Toggle */}
             <div className="flex items-center gap-4">
-              <Link
-                to="/cart"
-                className="relative text-cult-warmgray hover:text-cult-cream transition-colors duration-300 p-2"
-                aria-label="Cart"
-              >
-                <ShoppingCart size={22} />
-                {itemCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-cult-ember text-cult-cream text-[10px] font-body font-bold flex items-center justify-center rounded-full">
-                    {itemCount}
-                  </span>
-                )}
-              </Link>
+              {isAuthenticated ? (
+                <div className="relative" ref={profileRef}>
+                  <button
+                    onClick={() => setProfileOpen(!profileOpen)}
+                    className="flex items-center gap-2 p-2 rounded-full hover:bg-cult-espresso/50 transition-colors duration-200"
+                  >
+                    <div className="w-8 h-8 bg-cult-ember/20 border border-cult-ember/40 rounded-full flex items-center justify-center">
+                      <User size={16} className="text-cult-ember" />
+                    </div>
+                    <span className="hidden lg:block font-body text-xs tracking-widest uppercase text-cult-warmgray">
+                      {user?.name?.split(' ')[0] || 'Profile'}
+                    </span>
+                  </button>
+
+                  <AnimatePresence>
+                    {profileOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 top-full mt-2 w-56 bg-cult-espresso border border-cult-bronze/30 shadow-xl shadow-black/30"
+                      >
+                        {/* User Info */}
+                        <div className="p-4 border-b border-cult-bronze/20">
+                          <p className="font-body text-sm font-bold text-cult-cream">{user?.name}</p>
+                          <p className="font-body text-xs text-cult-warmgray truncate">{user?.email}</p>
+                        </div>
+
+                        {/* Links */}
+                        <div className="py-1">
+                          {profileLinks.map((link) => {
+                            const Icon = link.icon;
+                            return (
+                              <Link
+                                key={link.to}
+                                to={link.to}
+                                onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-3 px-4 py-2.5 font-body text-xs tracking-wider uppercase text-cult-warmgray hover:text-cult-cream hover:bg-cult-charcoal/50 transition-all duration-200"
+                              >
+                                <Icon size={14} />
+                                {link.label}
+                              </Link>
+                            );
+                          })}
+                        </div>
+
+                        {/* Logout */}
+                        <div className="border-t border-cult-bronze/20 p-1">
+                          <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-3 px-4 py-2.5 font-body text-xs tracking-wider uppercase text-red-400 hover:text-red-300 hover:bg-cult-charcoal/50 transition-all duration-200 w-full"
+                          >
+                            <LogOut size={14} />
+                            Logout
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <div className="hidden md:flex items-center gap-6">
+                  <Link
+                    to="/login"
+                    className={`font-body text-sm tracking-widest uppercase transition-colors duration-300 ${
+                      location.pathname === '/login'
+                        ? 'text-cult-cream'
+                        : 'text-cult-warmgray hover:text-cult-cream'
+                    }`}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="font-body text-xs tracking-widest uppercase px-5 py-2.5 bg-cult-ember text-cult-cream hover:bg-cult-deep-red transition-all duration-300"
+                  >
+                    Register
+                  </Link>
+                </div>
+              )}
 
               {/* Mobile Toggle */}
               <button
@@ -104,10 +206,7 @@ export default function Navbar() {
 
       <AnimatePresence>
         {mobileOpen && (
-          <MobileMenu
-            links={navLinks}
-            onClose={() => setMobileOpen(false)}
-          />
+          <MobileMenu onClose={() => setMobileOpen(false)} />
         )}
       </AnimatePresence>
     </>

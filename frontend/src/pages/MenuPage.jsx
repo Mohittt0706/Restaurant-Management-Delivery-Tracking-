@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ShoppingBag } from 'lucide-react';
 import FoodCard from '../components/menu/FoodCard';
 import Footer from '../components/Footer/Footer';
+import { useCart } from '../context/CartContext';
 import { fadeInUp, staggerContainer } from '../animations/variants';
 
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -12,6 +15,7 @@ export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { itemCount } = useCart();
 
   const fetchMenuData = async () => {
     setLoading(true);
@@ -188,6 +192,40 @@ export default function MenuPage() {
           </motion.p>
         )}
       </div>
+
+      {/* Sticky Cart Strip */}
+      <AnimatePresence>
+        {itemCount > 0 && (
+          <motion.div
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            exit={{ y: 100 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="fixed bottom-0 left-0 right-0 z-40 bg-cult-espresso border-t border-cult-bronze/30 shadow-lg shadow-black/30"
+          >
+            <div className="max-w-7xl mx-auto px-6 lg:px-10 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <ShoppingBag size={22} className="text-cult-ember" />
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-cult-ember text-cult-cream text-[10px] font-body font-bold flex items-center justify-center rounded-full">
+                    {itemCount}
+                  </span>
+                </div>
+                <span className="font-body text-sm text-cult-warmgray">
+                  {itemCount} {itemCount === 1 ? 'item' : 'items'} in cart
+                </span>
+              </div>
+              <Link
+                to="/cart"
+                className="font-body text-xs tracking-widest uppercase px-6 py-3 bg-cult-ember text-cult-cream hover:bg-cult-deep-red transition-all duration-300"
+              >
+                View Cart
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Footer />
     </main>
   );
