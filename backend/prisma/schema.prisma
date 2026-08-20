@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  MANAGER
+  KITCHEN
+  DELIVERY
+}
+
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  PREPARING
+  READY
+  ASSIGNED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  RAZORPAY
+  COD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum DeliveryStatus {
+  ASSIGNED
+  ACCEPTED
+  PICKED_UP
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  passwordHash String?
+  googleId     String?    @unique
+  phone        String?
+  role         Role       @default(CUSTOMER)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  cart         Cart?
+  orders       Order[]
+  addresses    Address[]
+  deliveries   Delivery[] @relation("DeliveryPartnerDeliveries")
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  image       String?
+  menuItems   MenuItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model MenuItem {
+  id              String      @id @default(uuid())
+  categoryId      String
+  category        Category    @relation(fields: [categoryId], references: [id])
+  name            String
+  image           String?
+  shortDescription String?
+  description     String?
+  price           Float
+  availability    Boolean     @default(true)
+  preparationTime Int?
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id         String   @id @default(uuid())
+  cartId     String
+  cart       Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity   Int      @default(1)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  street    String
+  city      String
+  state     String
+  zipCode   String
+  isDefault Boolean  @default(false)
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id                String       @id @default(uuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id])
+  orderNumber       String       @unique
+  status            OrderStatus  @default(PLACED)
+  totalAmount       Float
+  deliveryAddressId String?
+  deliveryAddress   Address?     @relation(fields: [deliveryAddressId], references: [id])
+  addressText       String?
+  paymentMethod     PaymentMethod @default(COD)
+  paymentStatus     PaymentStatus @default(PENDING)
+  notes             String?
+  items             OrderItem[]
+  payment           Payment?
+  invoice           Invoice?
+  delivery          Delivery?
+  statusHistory     OrderStatusHistory[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity   Int
+  price      Float
+}
+
+model OrderStatusHistory {
+  id              String      @id @default(uuid())
+  orderId         String
+  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status          OrderStatus
+  changedByUserId String?
+  createdAt       DateTime    @default(now())
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method        PaymentMethod
+  amount        Float
+  status        PaymentStatus @default(PENDING)
+  provider      String?
+  transactionId String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Invoice {
+  id            String   @id @default(uuid())
+  orderId       String   @unique
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  invoiceNumber String   @unique
+  subtotal      Float
+  tax           Float
+  deliveryFee   Float
+  totalAmount   Float
+  pdfPath       String?
+  createdAt     DateTime @default(now())
+}
+
+model InventoryItem {
+  id                String   @id @default(uuid())
+  name              String
+  unit              String
+  currentStock      Float
+  lowStockThreshold Float
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Delivery {
+  id                String         @id @default(uuid())
+  orderId           String         @unique
+  order             Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  deliveryPartnerId String
+  deliveryPartner   User           @relation("DeliveryPartnerDeliveries", fields: [deliveryPartnerId], references: [id])
+  status            DeliveryStatus @default(ASSIGNED)
+  assignedAt        DateTime       @default(now())
+  acceptedAt        DateTime?
+  pickedUpAt        DateTime?
+  outForDeliveryAt  DateTime?
+  deliveredAt       DateTime?
+  estimatedDistance Float?
+  estimatedDuration Int?
+}
