@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
 import Toast from '../components/common/Toast';
@@ -6,12 +7,33 @@ import { useAuth } from '../context/AuthContext';
 import { getGoogleCredential } from '../services/googleService';
 
 export default function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const { login, googleLogin } = useAuth();
+
+  const handleRedirect = (userRole) => {
+    setTimeout(() => {
+      switch (userRole) {
+        case 'MANAGER':
+          navigate('/manager');
+          break;
+        case 'KITCHEN':
+          navigate('/kitchen');
+          break;
+        case 'DELIVERY':
+          navigate('/delivery-partner');
+          break;
+        case 'CUSTOMER':
+        default:
+          navigate('/menu');
+          break;
+      }
+    }, 1000);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,8 +46,9 @@ const [showPassword, setShowPassword] = useState(false);
     setToast(null);
 
     try {
-      await login(email.trim(), password);
-      setToast({ type: 'success', message: 'Login Successful' });
+      const loggedUser = await login(email.trim(), password);
+      setToast({ type: 'success', message: 'Login Successful! Redirecting...' });
+      handleRedirect(loggedUser?.role);
     } catch (err) {
       setToast({ type: 'error', message: err.message || 'Unable to connect to server. Please try again.' });
     } finally {
@@ -43,8 +66,9 @@ const [showPassword, setShowPassword] = useState(false);
 
     try {
       const idToken = await getGoogleCredential();
-      await googleLogin(idToken);
-      setToast({ type: 'success', message: 'Login Successful' });
+      const loggedUser = await googleLogin(idToken);
+      setToast({ type: 'success', message: 'Login Successful! Redirecting...' });
+      handleRedirect(loggedUser?.role);
     } catch (err) {
       setToast({ type: 'error', message: err.message || 'Google sign-in failed. Please try again.' });
     } finally {
