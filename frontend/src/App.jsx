@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ManagerDashboardPage from './pages/ManagerDashboard/ManagerDashboardPage';
+import DeliveryPartnerDashboardPage from './pages/DeliveryPartnerDashboard/DeliveryPartnerDashboardPage';
 
 import MenuPage from './pages/MenuPage';
 import FoodDetailsPage from './pages/FoodDetailsPage';
@@ -18,11 +19,15 @@ import KitchenReady from './pages/kitchen/KitchenReady';
 
 function Layout() {
   const location = useLocation();
-  const isManagerRoute = location.pathname.startsWith('/manager') || location.pathname.startsWith('/dashboard');
+  const isDashboardRoute = 
+    location.pathname.startsWith('/manager') || 
+    location.pathname.startsWith('/dashboard') || 
+    location.pathname.startsWith('/delivery-partner') || 
+    location.pathname.startsWith('/delivery-dashboard');
 
   return (
     <>
-      {!isManagerRoute && <Navbar />}
+      {!isDashboardRoute && <Navbar />}
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/menu" element={<MenuPage />} />
@@ -46,6 +51,8 @@ function Layout() {
           <Route path="preparing" element={<KitchenPreparing />} />
           <Route path="ready" element={<KitchenReady />} />
         </Route>
+        <Route path="/delivery-partner" element={<DeliveryPartnerDashboardPage />} />
+        <Route path="/delivery-dashboard" element={<DeliveryPartnerDashboardPage />} />
       </Routes>
     </>
   );
