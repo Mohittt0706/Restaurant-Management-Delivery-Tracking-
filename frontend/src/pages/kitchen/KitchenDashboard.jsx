@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ClipboardList, ChefHat, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ClipboardList, ChefHat, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useKitchen } from '../../context/KitchenContext';
 import { fadeInUp, staggerContainer } from '../../animations/variants';
 
@@ -25,7 +25,7 @@ function StatCard({ icon: Icon, label, count, color }) {
 }
 
 export default function KitchenDashboard() {
-  const { newOrders, preparingOrders, readyOrders, loading } = useKitchen();
+  const { newOrders, preparingOrders, readyOrders, loading, error, refreshOrders } = useKitchen();
 
   const delayedCount = preparingOrders.filter((o) => {
     if (!o.acceptedAt) return false;
@@ -34,8 +34,24 @@ export default function KitchenDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-cult-ember border-t-transparent rounded-full animate-spin" />
+      <div className="flex flex-col items-center justify-center h-64">
+        <div className="w-8 h-8 border-2 border-cult-ember border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="font-body text-xs uppercase tracking-widest text-cult-warmgray">Loading kitchen dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <p className="font-heading text-lg text-cult-cream mb-4">{error}</p>
+        <button
+          onClick={refreshOrders}
+          className="inline-flex items-center gap-2 font-body text-xs tracking-widest uppercase bg-cult-ember px-6 py-3 text-cult-cream hover:bg-cult-deep-red transition-colors"
+        >
+          <RefreshCw size={14} />
+          Try Again
+        </button>
       </div>
     );
   }
@@ -47,12 +63,22 @@ export default function KitchenDashboard() {
         animate="visible"
         variants={staggerContainer}
       >
-        <motion.h1
-          variants={fadeInUp}
-          className="font-display text-3xl md:text-4xl tracking-widest text-cult-cream mb-8"
-        >
-          KITCHEN DASHBOARD
-        </motion.h1>
+        <div className="flex items-center justify-between mb-8">
+          <motion.h1
+            variants={fadeInUp}
+            className="font-display text-3xl md:text-4xl tracking-widest text-cult-cream"
+          >
+            KITCHEN DASHBOARD
+          </motion.h1>
+          <button
+            onClick={refreshOrders}
+            className="inline-flex items-center gap-2 font-body text-xs tracking-widest uppercase border border-cult-bronze/40 px-4 py-2 text-cult-cream hover:bg-cult-bronze/20 transition-colors"
+            title="Refresh Orders"
+          >
+            <RefreshCw size={14} />
+            Refresh
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard

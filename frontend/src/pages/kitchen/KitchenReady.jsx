@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, RefreshCw } from 'lucide-react';
 import { useKitchen } from '../../context/KitchenContext';
 import { fadeInUp, staggerContainer } from '../../animations/variants';
 
 function formatDuration(ms) {
+  if (!ms || ms <= 0) return '0 sec';
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -23,7 +24,7 @@ function ReadyOrderCard({ order }) {
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-display text-lg tracking-wider text-cult-cream">
-          #{order.id}
+          {order.displayNumber}
         </h3>
         <span className="flex items-center gap-1 font-body text-xs tracking-widest uppercase px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/30">
           <CheckCircle size={12} />
@@ -52,12 +53,28 @@ function ReadyOrderCard({ order }) {
 }
 
 export default function KitchenReady() {
-  const { readyOrders, loading } = useKitchen();
+  const { readyOrders, loading, error, refreshOrders } = useKitchen();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-cult-ember border-t-transparent rounded-full animate-spin" />
+      <div className="flex flex-col items-center justify-center h-64">
+        <div className="w-8 h-8 border-2 border-cult-ember border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="font-body text-xs uppercase tracking-widest text-cult-warmgray">Loading ready orders...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <p className="font-heading text-lg text-cult-cream mb-4">{error}</p>
+        <button
+          onClick={refreshOrders}
+          className="inline-flex items-center gap-2 font-body text-xs tracking-widest uppercase bg-cult-ember px-6 py-3 text-cult-cream hover:bg-cult-deep-red transition-colors"
+        >
+          <RefreshCw size={14} />
+          Try Again
+        </button>
       </div>
     );
   }
