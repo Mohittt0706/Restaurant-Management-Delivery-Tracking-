@@ -64,6 +64,56 @@ const markDelivered = async (req, res, next) => {
   }
 };
 
+const getDashboard = async (req, res, next) => {
+  try {
+    const stats = await deliveryService.getDashboard(req.user.id);
+    res.status(200).json({ success: true, data: stats });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getMyOrders = async (req, res, next) => {
+  try {
+    const deliveries = await deliveryService.getMyOrders(req.user.id);
+    res.status(200).json({ success: true, data: deliveries });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getMyOrderDetails = async (req, res, next) => {
+  try {
+    const delivery = await deliveryService.getMyOrder(req.params.id, req.user.id);
+    res.status(200).json({ success: true, data: delivery });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getMyActive = async (req, res, next) => {
+  try {
+    const delivery = await deliveryService.getMyActive(req.user.id);
+    res.status(200).json({ success: true, data: delivery });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateMyDeliveryStatus = (targetStatus) => async (req, res, next) => {
+  try {
+    const delivery = await deliveryService.updateMyDeliveryStatus(req.params.id, req.user.id, targetStatus);
+    res.status(200).json({ success: true, data: delivery });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const acceptMyDelivery = updateMyDeliveryStatus('ACCEPTED');
+const pickupMyDelivery = updateMyDeliveryStatus('PICKED_UP');
+const outForDeliveryMyDelivery = updateMyDeliveryStatus('OUT_FOR_DELIVERY');
+const deliverMyDelivery = updateMyDeliveryStatus('DELIVERED');
+
 module.exports = {
   getDeliveryPartners,
   assignDelivery,
@@ -72,4 +122,12 @@ module.exports = {
   pickupDelivery,
   outForDelivery,
   markDelivered,
+  getDashboard,
+  getMyOrders,
+  getMyOrderDetails,
+  getMyActive,
+  acceptMyDelivery,
+  pickupMyDelivery,
+  outForDeliveryMyDelivery,
+  deliverMyDelivery,
 };

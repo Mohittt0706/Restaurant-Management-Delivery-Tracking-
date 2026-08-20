@@ -1,8 +1,21 @@
 import React from 'react';
-import { X, CheckCircle2 } from 'lucide-react';
+import { X, CheckCircle2, Loader2 } from 'lucide-react';
 
-export default function OrderDetailPanel({ isOpen, onClose, order, onAccept }) {
-  if (!isOpen || !order) return null;
+export default function OrderDetailPanel({ isOpen, isLoading, onClose, order, onAccept }) {
+  if (!isOpen) return null;
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="flex items-center gap-3 bg-cult-espresso border border-cult-bronze px-8 py-6">
+          <Loader2 className="w-5 h-5 text-cult-ember animate-spin" />
+          <p className="text-xs font-mono text-cult-warmgray uppercase tracking-widest">Loading order details…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!order) return null;
 
   const isAccepted = order.status !== 'Assigned';
 
@@ -13,7 +26,7 @@ export default function OrderDetailPanel({ isOpen, onClose, order, onAccept }) {
         <div className="flex items-center justify-between border-b border-cult-bronze pb-4">
           <div>
             <h3 className="font-heading text-xl text-cult-cream">
-              Assigned Order #{order.id}
+              Assigned Order #{order.orderNumber || order.id}
             </h3>
             <p className="text-xs font-mono text-cult-warmgray mt-0.5">
               Status: <span className="text-cult-ember font-bold uppercase">{order.status || 'Assigned'}</span>
@@ -57,7 +70,7 @@ export default function OrderDetailPanel({ isOpen, onClose, order, onAccept }) {
         <div className="flex items-center justify-between p-3 bg-cult-charcoal border border-cult-bronze text-xs">
           <span className="text-cult-warmgray uppercase text-[10px] tracking-wider">Payment Status</span>
           <span className="font-bold font-mono text-cult-gold uppercase px-2.5 py-1 bg-cult-gold/20 border border-cult-gold/30">
-            {order.paymentStatus || 'Paid'}
+            {order.paymentStatus || 'PENDING'}
           </span>
         </div>
 
