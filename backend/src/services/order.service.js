@@ -1,7 +1,7 @@
 const prisma = require('../config/prisma');
 
 class OrderService {
-  async createOrder(userId, { deliveryAddress, addressText, paymentMethod = 'COD', notes, items: payloadItems }) {
+  async createOrder(userId, { deliveryAddress, addressText, paymentMethod = 'COD', notes, specialPreference, specialRequirements, cutlery, items: payloadItems }) {
     let orderItemsData = [];
     let subtotal = 0;
     let cartIdToDelete = null;
@@ -80,6 +80,13 @@ class OrderService {
       finalAddressText = `${deliveryAddress.street || ''}, ${deliveryAddress.city || ''}, ${deliveryAddress.state || ''} ${deliveryAddress.zipCode || ''}`.trim();
     }
 
+    const formattedSpecial = specialRequirements || specialPreference || null;
+    let formattedNotes = notes || null;
+    if (cutlery !== undefined && cutlery !== null) {
+      const cutleryStr = typeof cutlery === 'boolean' ? (cutlery ? 'Include cutlery' : 'No cutlery') : cutlery;
+      formattedNotes = formattedNotes ? `${cutleryStr}. ${formattedNotes}` : cutleryStr;
+    }
+
     // Execute in Prisma Transaction
     const result = await prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
@@ -91,7 +98,8 @@ class OrderService {
           addressText: finalAddressText || 'Default Customer Address',
           paymentMethod: paymentMethod === 'RAZORPAY' ? 'RAZORPAY' : 'COD',
           paymentStatus: 'PENDING',
-          notes,
+          notes: formattedNotes,
+          specialRequirements: formattedSpecial,
           items: {
             create: orderItemsData,
           },
@@ -138,8 +146,31 @@ class OrderService {
   }
 
   async getOrderById(id, userId = null) {
+    let targetId = id;
+
+    if (id === 'latest') {
+      if (!userId) {
+        const error = new Error('Authentication required to fetch latest order');
+        error.statusCode = 401;
+        throw error;
+      }
+
+      const latestOrder = await prisma.order.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!latestOrder) {
+        const error = new Error('No active or previous order found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      targetId = latestOrder.id;
+    }
+
     const order = await prisma.order.findUnique({
-      where: { id },
+      where: { id: targetId },
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
         items: { include: { menuItem: true } },
@@ -192,6 +223,37 @@ class OrderService {
   async getOrderTracking(id, userId) {
     const order = await this.getOrderById(id, userId);
 
+    let deliveryInfo = null;
+    if (order.delivery) {
+      const d = order.delivery;
+      let totalDeliveryTimeMinutes = null;
+      if (d.deliveredAt) {
+        const startTime = d.outForDeliveryAt || d.pickedUpAt || d.assignedAt;
+        if (startTime) {
+          totalDeliveryTimeMinutes = Math.max(0, Math.round((new Date(d.deliveredAt) - new Date(startTime)) / 60000));
+        }
+      }
+
+      deliveryInfo = {
+        deliveryId: d.id,
+        partnerId: d.deliveryPartnerId,
+        partnerName: d.deliveryPartner ? d.deliveryPartner.name : 'Delivery Partner',
+        partnerContact: d.deliveryPartner ? d.deliveryPartner.phone : null,
+        deliveryStatus: d.status,
+        pickupStatus: d.pickedUpAt ? 'PICKED_UP' : d.status,
+        assignedAt: d.assignedAt,
+        acceptedAt: d.acceptedAt,
+        pickedUpAt: d.pickedUpAt,
+        outForDeliveryAt: d.outForDeliveryAt,
+        startedAt: d.outForDeliveryAt || d.pickedUpAt || d.assignedAt,
+        deliveredAt: d.deliveredAt,
+        totalDeliveryTime: totalDeliveryTimeMinutes,
+        totalDeliveryTimeMinutes,
+        distance: d.estimatedDistance || 3.8,
+        ETA: d.estimatedDuration || 15,
+      };
+    }
+
     return {
       orderId: order.id,
       orderNumber: order.orderNumber,
@@ -200,14 +262,22 @@ class OrderService {
       paymentMethod: order.paymentMethod,
       totalAmount: order.totalAmount,
       addressText: order.addressText,
+      notes: order.notes,
+      specialRequirements: order.specialRequirements,
       createdAt: order.createdAt,
-      deliveryPartner: order.delivery ? {
-        name: order.delivery.deliveryPartner.name,
-        phone: order.delivery.deliveryPartner.phone,
-        status: order.delivery.status,
-        assignedAt: order.delivery.assignedAt,
-        pickedUpAt: order.delivery.pickedUpAt,
-        deliveredAt: order.delivery.deliveredAt,
+      deliveryPartner: deliveryInfo ? {
+        name: deliveryInfo.partnerName,
+        phone: deliveryInfo.partnerContact,
+        status: deliveryInfo.deliveryStatus,
+        assignedAt: deliveryInfo.assignedAt,
+        pickedUpAt: deliveryInfo.pickedUpAt,
+        deliveredAt: deliveryInfo.deliveredAt,
+      } : null,
+      delivery: deliveryInfo,
+      invoice: order.invoice ? {
+        id: order.invoice.id,
+        invoiceNumber: order.invoice.invoiceNumber,
+        totalAmount: order.invoice.totalAmount,
       } : null,
     };
   }

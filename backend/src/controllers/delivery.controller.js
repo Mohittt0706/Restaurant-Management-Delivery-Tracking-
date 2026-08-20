@@ -114,6 +114,15 @@ const pickupMyDelivery = updateMyDeliveryStatus('PICKED_UP');
 const outForDeliveryMyDelivery = updateMyDeliveryStatus('OUT_FOR_DELIVERY');
 const deliverMyDelivery = updateMyDeliveryStatus('DELIVERED');
 
+const confirmCodPayment = async (req, res, next) => {
+  try {
+    const result = await deliveryService.confirmCodPayment(req.params.id, req.user.id);
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getDeliveryPartners,
   assignDelivery,
@@ -130,4 +139,5 @@ module.exports = {
   pickupMyDelivery,
   outForDeliveryMyDelivery,
   deliverMyDelivery,
+  confirmCodPayment,
 };

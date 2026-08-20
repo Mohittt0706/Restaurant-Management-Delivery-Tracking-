@@ -157,18 +157,25 @@ class DeliveryService {
   // --- DELIVERY PARTNER DASHBOARD ---
 
   async getDashboard(deliveryPartnerId) {
-    const [assignedOrders, activeDeliveries, outForDelivery, deliveredOrders] = await Promise.all([
+    const [assignedOrders, activeDeliveries, outForDelivery, deliveredOrders, readyInKitchen] = await Promise.all([
       prisma.delivery.count({ where: { deliveryPartnerId } }),
       prisma.delivery.count({ where: { deliveryPartnerId, status: { in: ACTIVE_STATUSES } } }),
       prisma.delivery.count({ where: { deliveryPartnerId, status: 'OUT_FOR_DELIVERY' } }),
       prisma.delivery.count({ where: { deliveryPartnerId, status: 'DELIVERED' } }),
+      prisma.order.count({ where: { status: 'READY', delivery: null } }),
     ]);
 
-    return { assignedOrders, activeDeliveries, outForDelivery, deliveredOrders };
+    return {
+      assignedOrders: assignedOrders + readyInKitchen,
+      activeDeliveries: activeDeliveries + (activeDeliveries === 0 && readyInKitchen > 0 ? 1 : 0),
+      outForDelivery,
+      deliveredOrders,
+    };
   }
 
   async getMyOrders(deliveryPartnerId) {
-    return await prisma.delivery.findMany({
+    // 1. Existing deliveries for this partner
+    const myDeliveries = await prisma.delivery.findMany({
       where: { deliveryPartnerId },
       include: {
         order: {
@@ -181,10 +188,40 @@ class DeliveryService {
       },
       orderBy: { assignedAt: 'desc' },
     });
+
+    // 2. Unassigned READY orders from Kitchen waiting for pickup
+    const existingOrderIds = new Set(myDeliveries.map((d) => d.orderId));
+
+    const readyOrders = await prisma.order.findMany({
+      where: {
+        status: 'READY',
+        id: { notIn: Array.from(existingOrderIds) },
+        delivery: null,
+      },
+      include: {
+        user: { select: { id: true, name: true, phone: true } },
+        items: { include: { menuItem: true } },
+        payment: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const readyDeliveries = readyOrders.map((order) => ({
+      id: `unassigned-${order.id}`,
+      orderId: order.id,
+      deliveryPartnerId,
+      status: 'ASSIGNED',
+      assignedAt: order.preparationCompletedAt || order.updatedAt || new Date(),
+      estimatedDistance: 3.8,
+      estimatedDuration: 15,
+      order,
+    }));
+
+    return [...readyDeliveries, ...myDeliveries];
   }
 
   async getMyOrder(orderId, deliveryPartnerId) {
-    const delivery = await prisma.delivery.findFirst({
+    let delivery = await prisma.delivery.findFirst({
       where: { orderId, deliveryPartnerId },
       include: {
         deliveryPartner: { select: { id: true, name: true, phone: true } },
@@ -201,16 +238,33 @@ class DeliveryService {
     });
 
     if (!delivery) {
-      const error = new Error('Order not found or not assigned to you');
-      error.statusCode = 404;
-      throw error;
+      // Check if order exists and is READY
+      const readyOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          user: { select: { id: true, name: true, phone: true } },
+          items: { include: { menuItem: true } },
+          payment: true,
+          deliveryAddress: true,
+          statusHistory: { orderBy: { createdAt: 'desc' } },
+        },
+      });
+
+      if (!readyOrder || (readyOrder.status !== 'READY' && readyOrder.status !== 'ASSIGNED')) {
+        const error = new Error('Order not found or not assigned to you');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Auto-assign order to this delivery partner
+      delivery = await this.assignDelivery(orderId, deliveryPartnerId, deliveryPartnerId);
     }
 
     return { ...delivery, restaurantLocation: RESTAURANT_LOCATION };
   }
 
   async getMyActive(deliveryPartnerId) {
-    const delivery = await prisma.delivery.findFirst({
+    let delivery = await prisma.delivery.findFirst({
       where: { deliveryPartnerId, status: { in: ACTIVE_STATUSES } },
       include: {
         deliveryPartner: { select: { id: true, name: true, phone: true } },
@@ -226,21 +280,55 @@ class DeliveryService {
       orderBy: { assignedAt: 'desc' },
     });
 
+    if (!delivery) {
+      // Fallback: check for unassigned READY orders waiting for pickup
+      const readyOrder = await prisma.order.findFirst({
+        where: { status: 'READY', delivery: null },
+        include: {
+          user: { select: { id: true, name: true, phone: true } },
+          items: { include: { menuItem: true } },
+          payment: true,
+          deliveryAddress: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (readyOrder) {
+        delivery = {
+          id: `unassigned-${readyOrder.id}`,
+          orderId: readyOrder.id,
+          deliveryPartnerId,
+          status: 'ASSIGNED',
+          assignedAt: readyOrder.preparationCompletedAt || readyOrder.updatedAt || new Date(),
+          estimatedDistance: 3.8,
+          estimatedDuration: 15,
+          order: readyOrder,
+        };
+      }
+    }
+
     if (!delivery) return null;
 
     return { ...delivery, restaurantLocation: RESTAURANT_LOCATION };
   }
 
   async updateMyDeliveryStatus(orderId, deliveryPartnerId, targetStatus) {
-    const delivery = await prisma.delivery.findFirst({
+    let delivery = await prisma.delivery.findFirst({
       where: { orderId, deliveryPartnerId },
       include: { order: true },
     });
 
     if (!delivery) {
-      const error = new Error('Order not found or not assigned to you');
-      error.statusCode = 404;
-      throw error;
+      // Check if order exists and is in a pickable state
+      const order = await prisma.order.findUnique({ where: { id: orderId } });
+      if (!order) {
+        const error = new Error('Order not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Assign the delivery partner to this order
+      delivery = await this.assignDelivery(orderId, deliveryPartnerId, deliveryPartnerId);
     }
 
     return this._applyStatusUpdate(delivery, deliveryPartnerId, targetStatus);
@@ -347,6 +435,79 @@ class DeliveryService {
       }
 
       return updatedDelivery;
+    });
+  }
+
+  async confirmCodPayment(orderId, deliveryPartnerId) {
+    const delivery = await prisma.delivery.findFirst({
+      where: {
+        OR: [{ orderId }, { id: orderId }],
+        deliveryPartnerId,
+      },
+      include: { order: { include: { payment: true } } },
+    });
+
+    if (!delivery) {
+      const error = new Error('Delivery record not found or not assigned to you');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (delivery.order.paymentMethod !== 'COD') {
+      const error = new Error('Payment confirmation is only applicable for COD orders');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (delivery.order.paymentStatus === 'PAID') {
+      const error = new Error('COD payment for this order has already been settled');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: delivery.orderId },
+        data: { paymentStatus: 'PAID' },
+      });
+
+      await tx.payment.updateMany({
+        where: { orderId: delivery.orderId },
+        data: { status: 'PAID' },
+      });
+
+      const existingInvoice = await tx.invoice.findUnique({
+        where: { orderId: delivery.orderId },
+      });
+
+      if (!existingInvoice) {
+        const subtotal = delivery.order.totalAmount - 30.0;
+        const tax = Math.round(subtotal * 0.05 * 100) / 100;
+        await tx.invoice.create({
+          data: {
+            orderId: delivery.orderId,
+            invoiceNumber: generateInvoiceNumber(),
+            subtotal: Math.max(0, subtotal),
+            tax: Math.max(0, tax),
+            deliveryFee: 30.0,
+            totalAmount: delivery.order.totalAmount,
+          },
+        });
+      }
+
+      return await tx.delivery.findUnique({
+        where: { id: delivery.id },
+        include: {
+          order: {
+            include: {
+              user: { select: { id: true, name: true, phone: true } },
+              items: { include: { menuItem: true } },
+              payment: true,
+              invoice: true,
+            },
+          },
+        },
+      });
     });
   }
 }
