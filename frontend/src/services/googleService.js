@@ -1,4 +1,4 @@
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '350724521850-hih32056okk7bv7kt58imn9jmeobng4k.apps.googleusercontent.com';
 
 const GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
 

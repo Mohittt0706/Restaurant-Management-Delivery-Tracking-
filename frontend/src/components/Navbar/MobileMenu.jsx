@@ -22,7 +22,6 @@ export default function MobileMenu({ onClose }) {
     { label: 'My Cart', to: '/cart', icon: ShoppingBag },
     { label: 'Active Order', to: '/orders/latest/tracking', icon: Clock },
     { label: 'Order History', to: '/order-history', icon: History },
-    { label: 'Delivery Address', to: '/address', icon: MapPin },
   ];
 
   return (

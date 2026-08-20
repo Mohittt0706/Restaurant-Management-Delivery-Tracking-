@@ -1,21 +1,52 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Download, Loader2, CheckCircle2 } from 'lucide-react';
 import { useCheckout } from '../context/CheckoutContext';
+import { getInvoice } from '../services/orderService';
 import Footer from '../components/Footer/Footer';
 import { fadeInUp, staggerContainer } from '../animations/variants';
 
 export default function InvoicePage() {
   const navigate = useNavigate();
-  const { orderId, orderNumber, invoiceData, resetCheckout } = useCheckout();
+  const params = useParams();
+  const { orderId: contextOrderId, orderNumber: contextOrderNumber, invoiceData: contextInvoice, resetCheckout } = useCheckout();
   const [downloading, setDownloading] = useState(false);
+  const [fetchedInvoice, setFetchedInvoice] = useState(null);
+  const [loading, setLoading] = useState(!contextInvoice && !!params.orderId);
+  const [error, setError] = useState(null);
 
-  if (!invoiceData) {
+  const targetOrderId = params.orderId || contextOrderId;
+
+  useEffect(() => {
+    if (!contextInvoice && targetOrderId) {
+      setLoading(true);
+      getInvoice(targetOrderId)
+        .then((data) => {
+          setFetchedInvoice(data);
+          setError(null);
+        })
+        .catch((err) => setError(err.message || 'Unable to load invoice.'))
+        .finally(() => setLoading(false));
+    }
+  }, [contextInvoice, targetOrderId]);
+
+  const activeInvoice = contextInvoice || fetchedInvoice;
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-cult-charcoal pt-24 pb-16 flex flex-col items-center justify-center">
+        <Loader2 size={32} className="text-cult-ember animate-spin mb-4" />
+        <p className="font-body text-sm text-cult-warmgray tracking-widest uppercase">Loading Invoice...</p>
+      </main>
+    );
+  }
+
+  if (!activeInvoice) {
     return (
       <main className="min-h-screen bg-cult-charcoal pt-24 pb-16 flex flex-col items-center justify-center">
         <div className="text-center max-w-md mx-auto px-6">
-          <p className="font-heading text-xl text-cult-cream mb-2">No invoice data found.</p>
+          <p className="font-heading text-xl text-cult-cream mb-2">{error || 'No invoice data found.'}</p>
           <p className="font-body text-cult-warmgray mb-8">Place an order to view your invoice.</p>
           <Link
             to="/menu"
@@ -27,6 +58,8 @@ export default function InvoicePage() {
       </main>
     );
   }
+
+  const invoiceData = activeInvoice;
 
   const handleDownloadPdf = () => {
     setDownloading(true);

@@ -47,6 +47,7 @@ function Layout() {
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/payment" element={<PaymentPage />} />
         <Route path="/invoice" element={<InvoicePage />} />
+        <Route path="/invoice/:orderId" element={<InvoicePage />} />
         <Route path="/orders/:id/tracking" element={<OrderTrackingPage />} />
         <Route path="/order-history" element={<OrderHistoryPage />} />
         <Route path="/manager" element={<ManagerDashboardPage />} />
