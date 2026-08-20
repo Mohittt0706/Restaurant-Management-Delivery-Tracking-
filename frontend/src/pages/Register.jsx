@@ -127,18 +127,18 @@ export default function Register() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-cult-charcoal border border-cult-bronze text-cult-cream pl-4 pr-11 py-3 text-sm font-body outline-none focus:border-cult-ember transition-colors duration-300 placeholder:text-cult-warmgray/40"
+                className="w-full bg-cult-charcoal border border-cult-bronze text-cult-cream pl-4 pr-12 py-3 text-sm font-body outline-none focus:border-cult-ember transition-colors duration-300 placeholder:text-cult-warmgray/40"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 text-cult-warmgray hover:text-cult-cream transition-colors duration-200 p-1 cursor-pointer"
+                className="absolute right-3 z-20 text-cult-warmgray hover:text-cult-ember p-1.5 cursor-pointer transition-colors duration-200"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
-                  <EyeOff className="w-4 h-4 text-cult-warmgray hover:text-cult-cream" />
+                  <EyeOff className="w-5 h-5" />
                 ) : (
-                  <Eye className="w-4 h-4 text-cult-warmgray hover:text-cult-cream" />
+                  <Eye className="w-5 h-5" />
                 )}
               </button>
             </div>
