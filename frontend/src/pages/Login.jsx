@@ -1,21 +1,55 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Eye, EyeOff } from 'lucide-react';
 import Toast from '../components/common/Toast';
+import { useAuth } from '../context/AuthContext';
+import { getGoogleCredential } from '../services/googleService';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showToast, setShowToast] = useState(false);
+const [showPassword, setShowPassword] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { login, googleLogin } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!email.trim() || !password.trim()) {
+    if (!email.trim() || !password.trim() || submitting) {
       return;
     }
 
-    // Trigger success notification (UI simulation only - no backend validation)
-    setShowToast(true);
+    setSubmitting(true);
+    setToast(null);
+
+    try {
+      await login(email.trim(), password);
+      setToast({ type: 'success', message: 'Login Successful' });
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Unable to connect to server. Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    if (submitting) {
+      return;
+    }
+
+    setSubmitting(true);
+    setToast(null);
+
+    try {
+      const idToken = await getGoogleCredential();
+      await googleLogin(idToken);
+      setToast({ type: 'success', message: 'Login Successful' });
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Google sign-in failed. Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -25,9 +59,10 @@ export default function Login() {
 
       {/* Toast Notification */}
       <Toast
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-        message="Login Successful"
+        isVisible={!!toast}
+        onClose={() => setToast(null)}
+        message={toast?.message}
+        type={toast?.type}
         duration={3000}
       />
 
@@ -77,15 +112,29 @@ export default function Login() {
             >
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-cult-charcoal border border-cult-bronze text-cult-cream px-4 py-3 text-sm font-body outline-none focus:border-cult-ember transition-colors duration-300 placeholder:text-cult-warmgray/40"
-            />
+            <div className="relative flex items-center">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-cult-charcoal border border-cult-bronze text-cult-cream pl-4 pr-12 py-3 text-sm font-body outline-none focus:border-cult-ember transition-colors duration-300 placeholder:text-cult-warmgray/40"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 z-20 text-cult-warmgray hover:text-cult-ember p-1.5 cursor-pointer transition-colors duration-200"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
 
             {/* Forgot Password Link (UI Only Placeholder) */}
             <div className="flex justify-end mt-2">
@@ -102,9 +151,10 @@ export default function Login() {
           {/* Login Submit Button */}
           <button
             type="submit"
-            className="w-full bg-cult-ember text-cult-cream py-3.5 px-6 font-body text-sm uppercase tracking-widest font-medium hover:bg-cult-deep-red transition-all duration-300 cursor-pointer shadow-lg hover:shadow-cult-ember/20 active:scale-[0.99]"
+            disabled={submitting}
+            className="w-full bg-cult-ember text-cult-cream py-3.5 px-6 font-body text-sm uppercase tracking-widest font-medium hover:bg-cult-deep-red transition-all duration-300 cursor-pointer shadow-lg hover:shadow-cult-ember/20 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-cult-ember"
           >
-            Login
+            {submitting ? 'Logging in...' : 'Login'}
           </button>
 
           {/* OR Divider */}
@@ -120,8 +170,9 @@ export default function Login() {
           {/* Continue with Google Button */}
           <button
             type="button"
-            onClick={() => setShowToast(true)}
-            className="w-full border border-cult-bronze hover:border-cult-ember bg-transparent text-cult-cream py-3.5 px-6 font-body text-sm tracking-wide font-medium flex items-center justify-center gap-3 hover:bg-cult-charcoal/50 transition-all duration-300 cursor-pointer active:scale-[0.99]"
+            onClick={handleGoogle}
+            disabled={submitting}
+            className="w-full border border-cult-bronze hover:border-cult-ember bg-transparent text-cult-cream py-3.5 px-6 font-body text-sm tracking-wide font-medium flex items-center justify-center gap-3 hover:bg-cult-charcoal/50 transition-all duration-300 cursor-pointer active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
               <path
@@ -141,7 +192,7 @@ export default function Login() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span>Continue with Google</span>
+            <span>{submitting ? 'Signing in...' : 'Continue with Google'}</span>
           </button>
         </form>
       </motion.div>
