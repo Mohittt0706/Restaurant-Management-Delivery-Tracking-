@@ -5,16 +5,9 @@ import Button from '../common/Button';
 export default function Hero() {
   return (
     <section className="relative h-screen min-h-[600px] flex items-center overflow-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <img
-          src="/assets/images/hero-bg.jpg"
-          alt="CULT Restaurant"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-cult-charcoal/70" />
-        <div className="absolute inset-0 bg-gradient-to-r from-cult-charcoal/90 via-cult-charcoal/50 to-transparent" />
-      </div>
+      {/* Background — gradient since image is a placeholder */}
+      <div className="absolute inset-0 bg-gradient-to-br from-cult-charcoal via-cult-espresso to-cult-bronze/20" />
+      <div className="absolute inset-0 bg-gradient-to-r from-cult-charcoal/90 via-cult-charcoal/50 to-transparent" />
 
       {/* Content */}
       <motion.div

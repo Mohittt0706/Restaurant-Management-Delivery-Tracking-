@@ -17,13 +17,19 @@ const values = [
   },
 ];
 
-export default function LandingPage() {
+export default function AboutPage() {
   return (
-    <main>
+    <main className="min-h-screen bg-cult-charcoal pt-24 pb-16">
       {/* Hero */}
       <section className="relative h-[60vh] min-h-[400px] flex items-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-cult-espresso via-cult-charcoal to-cult-bronze/30" />
-        <div className="absolute inset-0 bg-cult-charcoal/40" />
+        <div className="absolute inset-0">
+          <img
+            src="/assets/images/about-preview.jpg"
+            alt="CULT interior"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-cult-charcoal/75" />
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -39,7 +45,7 @@ export default function LandingPage() {
       </section>
 
       {/* Story */}
-      <section className="py-20 bg-cult-charcoal">
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <div className="max-w-3xl mx-auto text-center">
             <motion.p

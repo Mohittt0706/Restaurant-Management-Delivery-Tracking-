@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCart } from '../../context/CartContext';
 import MobileMenu from './MobileMenu';
 
 const navLinks = [
+  { label: 'About', to: '/' },
   { label: 'Menu', to: '/menu' },
-  { label: 'About', to: '/about' },
   { label: 'Login', to: '/login' },
   { label: 'Register', to: '/register' },
 ];
@@ -14,6 +15,8 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+  const { itemCount } = useCart();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -25,6 +28,10 @@ export default function Navbar() {
     document.body.style.overflow = mobileOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location]);
 
   return (
     <>
@@ -53,22 +60,44 @@ export default function Navbar() {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className="font-body text-sm tracking-widest uppercase text-cult-warmgray hover:text-cult-cream transition-colors duration-300 relative group"
+                  className={`font-body text-sm tracking-widest uppercase transition-colors duration-300 relative group ${
+                    location.pathname === link.to
+                      ? 'text-cult-cream'
+                      : 'text-cult-warmgray hover:text-cult-cream'
+                  }`}
                 >
                   {link.label}
-                  <span className="absolute -bottom-1 left-0 w-0 h-px bg-cult-ember group-hover:w-full transition-all duration-300" />
+                  <span className={`absolute -bottom-1 left-0 h-px bg-cult-ember transition-all duration-300 ${
+                    location.pathname === link.to ? 'w-full' : 'w-0 group-hover:w-full'
+                  }`} />
                 </Link>
               ))}
             </div>
 
-            {/* Mobile Toggle */}
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden text-cult-cream p-2"
-              aria-label="Toggle menu"
-            >
-              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            {/* Cart + Mobile Toggle */}
+            <div className="flex items-center gap-4">
+              <Link
+                to="/cart"
+                className="relative text-cult-warmgray hover:text-cult-cream transition-colors duration-300 p-2"
+                aria-label="Cart"
+              >
+                <ShoppingCart size={22} />
+                {itemCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-cult-ember text-cult-cream text-[10px] font-body font-bold flex items-center justify-center rounded-full">
+                    {itemCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Mobile Toggle */}
+              <button
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className="md:hidden text-cult-cream p-2"
+                aria-label="Toggle menu"
+              >
+                {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
         </div>
       </motion.nav>

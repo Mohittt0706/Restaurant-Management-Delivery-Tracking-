@@ -1,8 +1,12 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { ShoppingCart } from 'lucide-react';
 import { mobileMenuVariants } from '../../animations/variants';
+import { useCart } from '../../context/CartContext';
 
 export default function MobileMenu({ links, onClose }) {
+  const { itemCount } = useCart();
+
   return (
     <motion.div
       variants={mobileMenuVariants}
@@ -27,6 +31,24 @@ export default function MobileMenu({ links, onClose }) {
           </Link>
         </motion.div>
       ))}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 + links.length * 0.08, duration: 0.4 }}
+      >
+        <Link
+          to="/cart"
+          onClick={onClose}
+          className="font-display text-4xl tracking-widest uppercase text-cult-cream hover:text-cult-ember transition-colors duration-300 inline-flex items-center gap-3"
+        >
+          Cart
+          {itemCount > 0 && (
+            <span className="w-7 h-7 bg-cult-ember text-cult-cream text-sm font-body font-bold flex items-center justify-center rounded-full">
+              {itemCount}
+            </span>
+          )}
+        </Link>
+      </motion.div>
     </motion.div>
   );
 }
