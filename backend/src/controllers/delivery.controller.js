@@ -1,74 +1,75 @@
 const deliveryService = require('../services/delivery.service');
 
-async function getReadyOrders(req, res, next) {
+const getDeliveryPartners = async (req, res, next) => {
   try {
-    const orders = await deliveryService.getReadyOrders();
-    res.status(200).json({ success: true, data: orders });
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function getUnassignedOrders(req, res, next) {
-  try {
-    const orders = await deliveryService.getUnassignedOrders();
-    res.status(200).json({ success: true, data: orders });
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function listPartners(req, res, next) {
-  try {
-    const partners = await deliveryService.listPartners();
+    const partners = await deliveryService.getDeliveryPartners();
     res.status(200).json({ success: true, data: partners });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function createPartner(req, res, next) {
+const assignDelivery = async (req, res, next) => {
   try {
-    const partner = await deliveryService.createPartner(req.body);
-    res.status(201).json({ success: true, data: partner });
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function assignPartner(req, res, next) {
-  try {
-    const assignment = await deliveryService.assignPartner(req.body.orderId, req.body.partnerId);
-    res.status(200).json({ success: true, data: assignment });
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function getActiveDeliveries(req, res, next) {
-  try {
-    const deliveries = await deliveryService.getActiveDeliveries();
-    res.status(200).json({ success: true, data: deliveries });
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function updateDeliveryStatus(req, res, next) {
-  try {
-    const delivery = await deliveryService.updateDeliveryStatus(req.params.id, req.body.status);
+    const { deliveryPartnerId } = req.body;
+    const delivery = await deliveryService.assignDelivery(req.params.id, deliveryPartnerId, req.user.id);
     res.status(200).json({ success: true, data: delivery });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
+
+const getAssignedDeliveries = async (req, res, next) => {
+  try {
+    const deliveries = await deliveryService.getAssignedDeliveries(req.user.id);
+    res.status(200).json({ success: true, data: deliveries });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const acceptDelivery = async (req, res, next) => {
+  try {
+    const delivery = await deliveryService.updateDeliveryStatus(req.params.id, req.user.id, 'ACCEPTED');
+    res.status(200).json({ success: true, data: delivery });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const pickupDelivery = async (req, res, next) => {
+  try {
+    const delivery = await deliveryService.updateDeliveryStatus(req.params.id, req.user.id, 'PICKED_UP');
+    res.status(200).json({ success: true, data: delivery });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const outForDelivery = async (req, res, next) => {
+  try {
+    const delivery = await deliveryService.updateDeliveryStatus(req.params.id, req.user.id, 'OUT_FOR_DELIVERY');
+    res.status(200).json({ success: true, data: delivery });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const markDelivered = async (req, res, next) => {
+  try {
+    const delivery = await deliveryService.updateDeliveryStatus(req.params.id, req.user.id, 'DELIVERED');
+    res.status(200).json({ success: true, data: delivery });
+  } catch (err) {
+    next(err);
+  }
+};
 
 module.exports = {
-  getReadyOrders,
-  getUnassignedOrders,
-  listPartners,
-  createPartner,
-  assignPartner,
-  getActiveDeliveries,
-  updateDeliveryStatus,
+  getDeliveryPartners,
+  assignDelivery,
+  getAssignedDeliveries,
+  acceptDelivery,
+  pickupDelivery,
+  outForDelivery,
+  markDelivered,
 };

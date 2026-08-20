@@ -1,22 +1,11 @@
-const ORDER_STATUSES = [
-  'PENDING',
-  'PLACED',
-  'PREPARING',
-  'READY',
-  'ASSIGNED',
-  'OUT_FOR_DELIVERY',
-  'DELIVERED',
-  'CANCELLED',
-];
-
-const KITCHEN_STATUSES = ['PENDING', 'PLACED', 'PREPARING', 'READY'];
-
-function isOrderStatus(value) {
-  return ORDER_STATUSES.includes(value);
-}
-
-module.exports = {
-  ORDER_STATUSES,
-  KITCHEN_STATUSES,
-  isOrderStatus,
+const ORDER_STATUS = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  PREPARING: 'PREPARING',
+  READY: 'READY',
+  OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED',
 };
+
+module.exports = ORDER_STATUS;

@@ -1,21 +1,16 @@
 const express = require('express');
-
-const deliveryController = require('../controllers/delivery.controller');
-const { authenticate } = require('../middleware/auth.middleware');
-const { requireRole, ROLES } = require('../middleware/role.middleware');
-const { validate } = require('../middleware/validation.middleware');
-const { assignSchema, partnerSchema, deliveryStatusSchema } = require('../validators/delivery.validator');
-
 const router = express.Router();
+const deliveryController = require('../controllers/delivery.controller');
+const authMiddleware = require('../middleware/auth.middleware');
+const roleMiddleware = require('../middleware/role.middleware');
 
-router.use(authenticate, requireRole(ROLES.ADMIN));
+router.use(authMiddleware);
 
-router.get('/ready', deliveryController.getReadyOrders);
-router.get('/unassigned', deliveryController.getUnassignedOrders);
-router.get('/partners', deliveryController.listPartners);
-router.post('/partners', validate(partnerSchema), deliveryController.createPartner);
-router.post('/assign', validate(assignSchema), deliveryController.assignPartner);
-router.get('/active', deliveryController.getActiveDeliveries);
-router.patch('/:id/status', validate(deliveryStatusSchema), deliveryController.updateDeliveryStatus);
+// Delivery Partner Routes
+router.get('/orders', roleMiddleware('DELIVERY'), deliveryController.getAssignedDeliveries);
+router.patch('/:id/accept', roleMiddleware('DELIVERY'), deliveryController.acceptDelivery);
+router.patch('/:id/pickup', roleMiddleware('DELIVERY'), deliveryController.pickupDelivery);
+router.patch('/:id/out-for-delivery', roleMiddleware('DELIVERY'), deliveryController.outForDelivery);
+router.patch('/:id/delivered', roleMiddleware('DELIVERY'), deliveryController.markDelivered);
 
 module.exports = router;

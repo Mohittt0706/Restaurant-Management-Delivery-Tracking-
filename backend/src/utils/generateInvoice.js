@@ -1,12 +1,8 @@
-let sequence = 0;
-
-function generateInvoiceNumber() {
-  sequence += 1;
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const random = Math.floor(Math.random() * 9000 + 1000);
-  return `INV-${date}-${random}${sequence}`;
-}
-
-module.exports = {
-  generateInvoiceNumber,
+const generateInvoiceNumber = () => {
+  const prefix = 'INV';
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(1000 + Math.random() * 9000);
+  return `${prefix}-${timestamp}-${random}`;
 };
+
+module.exports = { generateInvoiceNumber };

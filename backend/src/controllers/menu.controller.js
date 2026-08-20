@@ -1,54 +1,66 @@
 const menuService = require('../services/menu.service');
 
-async function listMenu(req, res, next) {
+const getMenuItems = async (req, res, next) => {
   try {
-    const items = await menuService.listMenu(req.query);
+    const { category, search, availableOnly } = req.query;
+    const items = await menuService.getMenuItems({ category, search, availableOnly: availableOnly === 'true' });
     res.status(200).json({ success: true, data: items });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function getMenu(req, res, next) {
+const getItemById = async (req, res, next) => {
   try {
-    const item = await menuService.getMenu(req.params.id);
+    const item = await menuService.getItemById(req.params.id);
     res.status(200).json({ success: true, data: item });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function createMenu(req, res, next) {
+const createMenuItem = async (req, res, next) => {
   try {
-    const item = await menuService.createMenu(req.body);
+    const item = await menuService.createMenuItem(req.body);
     res.status(201).json({ success: true, data: item });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function updateMenu(req, res, next) {
+const updateMenuItem = async (req, res, next) => {
   try {
-    const item = await menuService.updateMenu(req.params.id, req.body);
+    const item = await menuService.updateMenuItem(req.params.id, req.body);
     res.status(200).json({ success: true, data: item });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function deleteMenu(req, res, next) {
+const updateAvailability = async (req, res, next) => {
   try {
-    const result = await menuService.deleteMenu(req.params.id);
-    res.status(200).json({ success: true, data: result });
-  } catch (error) {
-    next(error);
+    const { availability } = req.body;
+    const item = await menuService.updateAvailability(req.params.id, availability);
+    res.status(200).json({ success: true, data: item });
+  } catch (err) {
+    next(err);
   }
-}
+};
+
+const deleteMenuItem = async (req, res, next) => {
+  try {
+    await menuService.deleteMenuItem(req.params.id);
+    res.status(200).json({ success: true, message: 'Menu item deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
 
 module.exports = {
-  listMenu,
-  getMenu,
-  createMenu,
-  updateMenu,
-  deleteMenu,
+  getMenuItems,
+  getItemById,
+  createMenuItem,
+  updateMenuItem,
+  updateAvailability,
+  deleteMenuItem,
 };

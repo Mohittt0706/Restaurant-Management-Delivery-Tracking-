@@ -1,22 +1,61 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Minus, Plus, ShoppingCart, Check } from 'lucide-react';
-import { menuItems } from '../data/menuItems';
 import { useCart } from '../context/CartContext';
 import Footer from '../components/Footer/Footer';
 import { fadeIn, fadeInUp } from '../animations/variants';
+
+const API_BASE_URL = 'http://localhost:5000/api';
 
 export default function FoodDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [addedFeedback, setAddedFeedback] = useState(false);
 
-  const item = menuItems.find((i) => i.id === Number(id));
+  useEffect(() => {
+    const fetchItemDetails = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`${API_BASE_URL}/menu/${id}`);
+        if (!res.ok) {
+          throw new Error('Dish not found');
+        }
+        const json = await res.json();
+        const data = json.data;
+        setItem({
+          ...data,
+          category: typeof data.category === 'object' ? data.category?.name : data.category,
+        });
+      } catch (err) {
+        console.error('Error loading dish details:', err);
+        setError('DISH NOT FOUND');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (!item) {
+    fetchItemDetails();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-cult-charcoal pt-24 pb-16 flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-cult-ember border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="font-body text-cult-warmgray text-sm tracking-widest uppercase">
+          Loading dish details...
+        </p>
+      </main>
+    );
+  }
+
+  if (error || !item) {
     return (
       <main className="min-h-screen bg-cult-charcoal pt-24 pb-16 flex flex-col items-center justify-center">
         <h1 className="font-display text-4xl tracking-widest text-cult-cream mb-6">

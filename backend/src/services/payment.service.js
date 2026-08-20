@@ -1,51 +1,98 @@
 const prisma = require('../config/prisma');
-const { ApiError } = require('../middleware/error.middleware');
-const { isPaymentStatus } = require('../utils/paymentStatus');
+const crypto = require('crypto');
+const { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET } = require('../config/env');
 
-function serializePayment(payment) {
-  return {
-    ...payment,
-    amount: payment.amount.toNumber(),
-  };
-}
+class PaymentService {
+  async createRazorpayOrder(orderId, userId) {
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      const error = new Error('Order not found');
+      error.statusCode = 404;
+      throw error;
+    }
 
-async function listPayments({ status } = {}) {
-  const where = {};
-  if (status) {
-    if (!isPaymentStatus(status)) throw new ApiError(400, 'Invalid payment status.');
-    where.status = status;
+    if (order.userId !== userId) {
+      const error = new Error('Access forbidden');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const mockRazorpayOrderId = 'rzp_order_' + Date.now() + Math.floor(100 + Math.random() * 900);
+
+    await prisma.payment.upsert({
+      where: { orderId },
+      update: {
+        method: 'RAZORPAY',
+        provider: 'RAZORPAY',
+        transactionId: mockRazorpayOrderId,
+      },
+      create: {
+        orderId,
+        method: 'RAZORPAY',
+        amount: order.totalAmount,
+        provider: 'RAZORPAY',
+        transactionId: mockRazorpayOrderId,
+        status: 'PENDING',
+      },
+    });
+
+    return {
+      razorpayOrderId: mockRazorpayOrderId,
+      amount: order.totalAmount * 100, // Amount in paise
+      currency: 'INR',
+      keyId: RAZORPAY_KEY_ID,
+    };
   }
 
-  const payments = await prisma.payment.findMany({
-    where,
-    include: {
-      order: {
-        include: { customer: { select: { id: true, name: true, email: true, phone: true } } },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  async verifyRazorpayPayment({ orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature }) {
+    const payment = await prisma.payment.findUnique({ where: { orderId } });
+    if (!payment) {
+      const error = new Error('Payment record not found');
+      error.statusCode = 404;
+      throw error;
+    }
 
-  return payments.map(serializePayment);
-}
+    // Verify signature if secret provided, else simulate verification
+    let isValid = true;
+    if (razorpayOrderId && razorpayPaymentId && razorpaySignature && RAZORPAY_KEY_SECRET !== 'mock_secret_456') {
+      const body = razorpayOrderId + '|' + razorpayPaymentId;
+      const expectedSignature = crypto
+        .createHmac('sha256', RAZORPAY_KEY_SECRET)
+        .update(body.toString())
+        .digest('hex');
+      isValid = expectedSignature === razorpaySignature;
+    }
 
-async function getPayment(id) {
-  const payment = await prisma.payment.findUnique({
-    where: { id },
-    include: {
-      order: {
-        include: {
-          customer: { select: { id: true, name: true, email: true, phone: true } },
-          items: true,
+    if (!isValid) {
+      await prisma.payment.update({
+        where: { orderId },
+        data: { status: 'FAILED' },
+      });
+      const error = new Error('Payment verification failed. Invalid signature.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const updatedPayment = await tx.payment.update({
+        where: { orderId },
+        data: {
+          status: 'PAID',
+          transactionId: razorpayPaymentId || razorpayOrderId || 'TXN_' + Date.now(),
         },
-      },
-    },
-  });
-  if (!payment) throw new ApiError(404, 'Payment not found.');
-  return serializePayment(payment);
+      });
+
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          paymentStatus: 'PAID',
+          status: 'CONFIRMED',
+        },
+      });
+
+      return updatedPayment;
+    });
+  }
 }
 
-module.exports = {
-  listPayments,
-  getPayment,
-};
+module.exports = new PaymentService();

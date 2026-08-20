@@ -1,143 +1,192 @@
 const prisma = require('../config/prisma');
-const { ApiError } = require('../middleware/error.middleware');
-const { isDeliveryStatus } = require('../utils/deliveryStatus');
-const { serializeOrder, ORDER_INCLUDE } = require('./order.service');
+const { generateInvoiceNumber } = require('../utils/generateInvoice');
 
-async function getReadyOrders() {
-  const orders = await prisma.order.findMany({
-    where: { status: 'READY' },
-    include: ORDER_INCLUDE,
-    orderBy: { updatedAt: 'asc' },
-  });
-  return orders.map(serializeOrder);
-}
-
-async function getUnassignedOrders() {
-  const orders = await prisma.order.findMany({
-    where: { status: 'READY', deliveryAssignment: null },
-    include: ORDER_INCLUDE,
-    orderBy: { updatedAt: 'asc' },
-  });
-  return orders.map(serializeOrder);
-}
-
-async function listPartners() {
-  return prisma.deliveryPartner.findMany({
-    include: { _count: { select: { assignments: true } } },
-    orderBy: { createdAt: 'asc' },
-  });
-}
-
-async function createPartner({ name, phone, vehicle }) {
-  try {
-    return await prisma.deliveryPartner.create({
-      data: { name, phone, vehicle: vehicle || null },
+class DeliveryService {
+  async getDeliveryPartners() {
+    return await prisma.user.findMany({
+      where: { role: 'DELIVERY', isActive: true },
+      select: { id: true, name: true, email: true, phone: true, createdAt: true },
     });
-  } catch (error) {
-    if (error.code === 'P2002') throw new ApiError(409, 'A partner with this phone number already exists.');
-    throw error;
-  }
-}
-
-async function assignPartner(orderId, partnerId) {
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order) throw new ApiError(404, 'Order not found.');
-  if (order.status !== 'READY') {
-    throw new ApiError(409, 'Only READY orders can be assigned to a delivery partner.');
   }
 
-  const partner = await prisma.deliveryPartner.findUnique({ where: { id: partnerId } });
-  if (!partner) throw new ApiError(404, 'Delivery partner not found.');
-  if (partner.status === 'OFFLINE') throw new ApiError(409, 'This partner is offline.');
+  async assignDelivery(orderId, deliveryPartnerId, managerUserId) {
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      const error = new Error('Order not found');
+      error.statusCode = 404;
+      throw error;
+    }
 
-  const existing = await prisma.deliveryAssignment.findUnique({ where: { orderId } });
-  if (existing) throw new ApiError(409, 'This order is already assigned.');
+    if (order.status !== 'READY' && order.status !== 'CONFIRMED') {
+      const error = new Error(`Order must be in READY state to assign delivery partner (current: "${order.status}")`);
+      error.statusCode = 409;
+      throw error;
+    }
 
-  const assignment = await prisma.$transaction([
-    prisma.deliveryAssignment.create({
-      data: { orderId, partnerId },
-    }),
-    prisma.order.update({ where: { id: orderId }, data: { status: 'ASSIGNED' } }),
-    prisma.deliveryPartner.update({ where: { id: partnerId }, data: { status: 'BUSY' } }),
-  ]);
+    const partner = await prisma.user.findFirst({
+      where: { id: deliveryPartnerId, role: 'DELIVERY' },
+    });
 
-  return assignment[0];
-}
+    if (!partner) {
+      const error = new Error('Invalid delivery partner ID');
+      error.statusCode = 400;
+      throw error;
+    }
 
-async function getActiveDeliveries() {
-  const assignments = await prisma.deliveryAssignment.findMany({
-    where: { status: { not: 'DELIVERED' } },
-    include: {
-      order: { include: ORDER_INCLUDE },
-      partner: true,
-    },
-    orderBy: { assignedAt: 'desc' },
-  });
+    return await prisma.$transaction(async (tx) => {
+      // Upsert Delivery record
+      const delivery = await tx.delivery.upsert({
+        where: { orderId },
+        update: {
+          deliveryPartnerId,
+          status: 'ASSIGNED',
+          assignedAt: new Date(),
+        },
+        create: {
+          orderId,
+          deliveryPartnerId,
+          status: 'ASSIGNED',
+          assignedAt: new Date(),
+          estimatedDistance: 3.8,
+          estimatedDuration: 15,
+        },
+        include: {
+          deliveryPartner: { select: { id: true, name: true, phone: true } },
+          order: true,
+        },
+      });
 
-  return assignments.map((a) => ({
-    id: a.id,
-    order: serializeOrder(a.order),
-    partner: a.partner,
-    status: a.status,
-    assignedAt: a.assignedAt,
-  }));
-}
+      // Update Order Status to ASSIGNED
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: 'ASSIGNED',
+          statusHistory: {
+            create: {
+              status: 'ASSIGNED',
+              changedByUserId: managerUserId,
+            },
+          },
+        },
+      });
 
-async function updateDeliveryStatus(id, status) {
-  if (!isDeliveryStatus(status)) throw new ApiError(400, 'Invalid delivery status.');
+      return delivery;
+    });
+  }
 
-  const assignment = await prisma.deliveryAssignment.findUnique({
-    where: { id },
-    include: { order: true, partner: true },
-  });
-  if (!assignment) throw new ApiError(404, 'Delivery assignment not found.');
-
-  const orderStatusMap = {
-    ASSIGNED: 'ASSIGNED',
-    PICKED_UP: 'OUT_FOR_DELIVERY',
-    OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
-    DELIVERED: 'DELIVERED',
-  };
-
-  const updated = await prisma.$transaction([
-    prisma.deliveryAssignment.update({
-      where: { id },
-      data: {
-        status,
-        deliveredAt: status === 'DELIVERED' ? new Date() : null,
+  async getAssignedDeliveries(deliveryPartnerId) {
+    return await prisma.delivery.findMany({
+      where: { deliveryPartnerId },
+      include: {
+        order: {
+          include: {
+            user: { select: { id: true, name: true, phone: true } },
+            items: { include: { menuItem: true } },
+            payment: true,
+          },
+        },
       },
-    }),
-    prisma.order.update({
-      where: { id: assignment.orderId },
-      data: { status: orderStatusMap[status] },
-    }),
-    prisma.deliveryPartner.update({
-      where: { id: assignment.partnerId },
-      data: { status: status === 'DELIVERED' ? 'AVAILABLE' : 'BUSY' },
-    }),
-  ]);
+      orderBy: { assignedAt: 'desc' },
+    });
+  }
 
-  const fresh = await prisma.deliveryAssignment.findUnique({
-    where: { id },
-    include: { order: { include: ORDER_INCLUDE }, partner: true },
-  });
+  async updateDeliveryStatus(deliveryId, deliveryPartnerId, targetStatus) {
+    const delivery = await prisma.delivery.findUnique({
+      where: { id: deliveryId },
+      include: { order: true },
+    });
 
-  return {
-    id: fresh.id,
-    order: serializeOrder(fresh.order),
-    partner: fresh.partner,
-    status: fresh.status,
-    assignedAt: fresh.assignedAt,
-    deliveredAt: fresh.deliveredAt,
-  };
+    if (!delivery) {
+      const error = new Error('Delivery record not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (delivery.deliveryPartnerId !== deliveryPartnerId) {
+      const error = new Error('You are not assigned to this delivery');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const now = new Date();
+    const updateData = { status: targetStatus };
+
+    let targetOrderStatus = delivery.order.status;
+
+    if (targetStatus === 'ACCEPTED') {
+      updateData.acceptedAt = now;
+    } else if (targetStatus === 'PICKED_UP') {
+      updateData.pickedUpAt = now;
+    } else if (targetStatus === 'OUT_FOR_DELIVERY') {
+      updateData.outForDeliveryAt = now;
+      targetOrderStatus = 'OUT_FOR_DELIVERY';
+    } else if (targetStatus === 'DELIVERED') {
+      updateData.deliveredAt = now;
+      targetOrderStatus = 'DELIVERED';
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      // Update delivery record
+      const updatedDelivery = await tx.delivery.update({
+        where: { id: deliveryId },
+        data: updateData,
+        include: {
+          order: {
+            include: {
+              user: { select: { id: true, name: true, phone: true } },
+              items: { include: { menuItem: true } },
+              payment: true,
+            },
+          },
+        },
+      });
+
+      // Update Order status
+      await tx.order.update({
+        where: { id: delivery.orderId },
+        data: {
+          status: targetOrderStatus,
+          ...(targetStatus === 'DELIVERED' && { paymentStatus: 'PAID' }),
+          statusHistory: {
+            create: {
+              status: targetOrderStatus,
+              changedByUserId: deliveryPartnerId,
+            },
+          },
+        },
+      });
+
+      // Update payment record to PAID on delivery
+      if (targetStatus === 'DELIVERED') {
+        await tx.payment.updateMany({
+          where: { orderId: delivery.orderId },
+          data: { status: 'PAID' },
+        });
+
+        // Auto-generate invoice if not exists
+        const existingInvoice = await tx.invoice.findUnique({
+          where: { orderId: delivery.orderId },
+        });
+
+        if (!existingInvoice) {
+          const subtotal = delivery.order.totalAmount - 30.0;
+          const tax = Math.round(subtotal * 0.05 * 100) / 100;
+          await tx.invoice.create({
+            data: {
+              orderId: delivery.orderId,
+              invoiceNumber: generateInvoiceNumber(),
+              subtotal: Math.max(0, subtotal),
+              tax: Math.max(0, tax),
+              deliveryFee: 30.0,
+              totalAmount: delivery.order.totalAmount,
+            },
+          });
+        }
+      }
+
+      return updatedDelivery;
+    });
+  }
 }
 
-module.exports = {
-  getReadyOrders,
-  getUnassignedOrders,
-  listPartners,
-  createPartner,
-  assignPartner,
-  getActiveDeliveries,
-  updateDeliveryStatus,
-};
+module.exports = new DeliveryService();

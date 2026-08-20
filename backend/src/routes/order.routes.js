@@ -1,17 +1,15 @@
 const express = require('express');
-
-const orderController = require('../controllers/order.controller');
-const { authenticate } = require('../middleware/auth.middleware');
-const { requireRole, ROLES } = require('../middleware/role.middleware');
-const { validate } = require('../middleware/validation.middleware');
-const { orderStatusSchema } = require('../validators/order.validator');
-
 const router = express.Router();
+const orderController = require('../controllers/order.controller');
+const authMiddleware = require('../middleware/auth.middleware');
+const roleMiddleware = require('../middleware/role.middleware');
 
-router.use(authenticate, requireRole(ROLES.ADMIN));
+router.use(authMiddleware);
 
-router.get('/', orderController.listOrders);
-router.get('/:id', orderController.getOrder);
-router.patch('/:id/status', validate(orderStatusSchema), orderController.updateOrderStatus);
+router.post('/', roleMiddleware('CUSTOMER'), orderController.createOrder);
+router.get('/my', roleMiddleware('CUSTOMER'), orderController.getMyOrders);
+router.get('/:id/tracking', roleMiddleware('CUSTOMER'), orderController.getOrderTracking);
+router.get('/:id', orderController.getOrderById);
+router.patch('/:id/cancel', roleMiddleware('CUSTOMER'), orderController.cancelOrder);
 
 module.exports = router;

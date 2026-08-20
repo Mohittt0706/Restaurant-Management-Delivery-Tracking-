@@ -1,24 +1,25 @@
 const paymentService = require('../services/payment.service');
 
-async function listPayments(req, res, next) {
+const createRazorpayOrder = async (req, res, next) => {
   try {
-    const payments = await paymentService.listPayments({ status: req.query.status });
-    res.status(200).json({ success: true, data: payments });
-  } catch (error) {
-    next(error);
+    const { orderId } = req.body;
+    const result = await paymentService.createRazorpayOrder(orderId, req.user.id);
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function getPayment(req, res, next) {
+const verifyRazorpayPayment = async (req, res, next) => {
   try {
-    const payment = await paymentService.getPayment(req.params.id);
-    res.status(200).json({ success: true, data: payment });
-  } catch (error) {
-    next(error);
+    const result = await paymentService.verifyRazorpayPayment(req.body);
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
   }
-}
+};
 
 module.exports = {
-  listPayments,
-  getPayment,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
 };

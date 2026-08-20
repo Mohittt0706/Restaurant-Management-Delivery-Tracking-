@@ -1,43 +1,43 @@
 const menuService = require('../services/menu.service');
 
-async function listCategories(req, res, next) {
+const getCategories = async (req, res, next) => {
   try {
-    const categories = await menuService.listCategories();
+    const categories = await menuService.getCategories();
     res.status(200).json({ success: true, data: categories });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function createCategory(req, res, next) {
+const createCategory = async (req, res, next) => {
   try {
     const category = await menuService.createCategory(req.body);
     res.status(201).json({ success: true, data: category });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function updateCategory(req, res, next) {
+const updateCategory = async (req, res, next) => {
   try {
     const category = await menuService.updateCategory(req.params.id, req.body);
     res.status(200).json({ success: true, data: category });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function deleteCategory(req, res, next) {
+const deleteCategory = async (req, res, next) => {
   try {
-    const result = await menuService.deleteCategory(req.params.id);
-    res.status(200).json({ success: true, data: result });
-  } catch (error) {
-    next(error);
+    await menuService.deleteCategory(req.params.id);
+    res.status(200).json({ success: true, message: 'Category deleted successfully' });
+  } catch (err) {
+    next(err);
   }
-}
+};
 
 module.exports = {
-  listCategories,
+  getCategories,
   createCategory,
   updateCategory,
   deleteCategory,

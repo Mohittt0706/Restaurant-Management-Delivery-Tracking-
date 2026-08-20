@@ -1,36 +1,19 @@
 const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../config/env');
 
-const env = require('../config/env');
-const { ApiError } = require('./error.middleware');
-
-function authenticate(req, res, next) {
-  const header = req.headers.authorization || '';
-
-  const [scheme, token] = header.split(' ');
-
-  if (scheme !== 'Bearer' || !token) {
-    return next(new ApiError(401, 'Authentication required.'));
+const authMiddleware = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'Authentication required' });
   }
 
-  let payload;
   try {
-    payload = jwt.verify(token, env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
   } catch (error) {
-    const message =
-      error.name === 'TokenExpiredError'
-        ? 'Session has expired. Please log in again.'
-        : 'Invalid or expired token.';
-    return next(new ApiError(401, message));
+    return res.status(401).json({ message: 'Invalid token' });
   }
-
-  req.user = {
-    userId: payload.userId,
-    role: payload.role,
-  };
-
-  next();
-}
-
-module.exports = {
-  authenticate,
 };
+
+module.exports = authMiddleware;

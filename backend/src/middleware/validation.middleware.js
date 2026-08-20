@@ -1,18 +1,12 @@
-const { ApiError } = require('./error.middleware');
-
-function validate(validator) {
+const validationMiddleware = (schema) => {
   return (req, res, next) => {
-    const { errors, value } = validator.validate(req.body);
-
-    if (errors && errors.length > 0) {
-      return next(new ApiError(400, 'Validation failed.', errors));
+    if (!schema) return next();
+    const { error } = schema.validate ? schema.validate(req.body) : { error: null };
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
     }
-
-    req.body = value || req.body;
     next();
   };
-}
-
-module.exports = {
-  validate,
 };
+
+module.exports = validationMiddleware;

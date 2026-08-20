@@ -1,17 +1,15 @@
 const express = require('express');
-
-const kitchenController = require('../controllers/kitchen.controller');
-const { authenticate } = require('../middleware/auth.middleware');
-const { requireRole, ROLES } = require('../middleware/role.middleware');
-const { validate } = require('../middleware/validation.middleware');
-const { orderStatusSchema } = require('../validators/order.validator');
-
 const router = express.Router();
+const kitchenController = require('../controllers/kitchen.controller');
+const authMiddleware = require('../middleware/auth.middleware');
+const roleMiddleware = require('../middleware/role.middleware');
 
-router.use(authenticate, requireRole(ROLES.ADMIN));
+router.use(authMiddleware);
+router.use(roleMiddleware('KITCHEN', 'MANAGER'));
 
-router.get('/orders', kitchenController.listKitchenOrders);
-router.get('/orders/:id', kitchenController.getKitchenOrder);
-router.patch('/orders/:id/status', validate(orderStatusSchema), kitchenController.updateKitchenStatus);
+router.get('/orders', kitchenController.getActiveOrders);
+router.patch('/orders/:id/accept', kitchenController.acceptOrder);
+router.patch('/orders/:id/preparing', kitchenController.markPreparing);
+router.patch('/orders/:id/ready', kitchenController.markReady);
 
 module.exports = router;

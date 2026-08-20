@@ -1,10 +1,9 @@
-const DELIVERY_STATUSES = ['ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'];
-
-function isDeliveryStatus(value) {
-  return DELIVERY_STATUSES.includes(value);
-}
-
-module.exports = {
-  DELIVERY_STATUSES,
-  isDeliveryStatus,
+const DELIVERY_STATUS = {
+  ASSIGNED: 'ASSIGNED',
+  PICKED_UP: 'PICKED_UP',
+  IN_TRANSIT: 'IN_TRANSIT',
+  DELIVERED: 'DELIVERED',
+  FAILED: 'FAILED',
 };
+
+module.exports = DELIVERY_STATUS;

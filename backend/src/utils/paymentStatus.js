@@ -1,10 +1,8 @@
-const PAYMENT_STATUSES = ['PENDING', 'PAID', 'FAILED', 'COD'];
-
-function isPaymentStatus(value) {
-  return PAYMENT_STATUSES.includes(value);
-}
-
-module.exports = {
-  PAYMENT_STATUSES,
-  isPaymentStatus,
+const PAYMENT_STATUS = {
+  PENDING: 'PENDING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+  REFUNDED: 'REFUNDED',
 };
+
+module.exports = PAYMENT_STATUS;

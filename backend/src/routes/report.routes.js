@@ -1,16 +1,12 @@
 const express = require('express');
-
-const reportController = require('../controllers/report.controller');
-const { authenticate } = require('../middleware/auth.middleware');
-const { requireRole, ROLES } = require('../middleware/role.middleware');
-
 const router = express.Router();
+const reportController = require('../controllers/report.controller');
+const authMiddleware = require('../middleware/auth.middleware');
+const roleMiddleware = require('../middleware/role.middleware');
 
-router.use(authenticate, requireRole(ROLES.ADMIN));
+router.use(authMiddleware);
+router.use(roleMiddleware('MANAGER'));
 
-router.get('/sales', reportController.salesReport);
-router.get('/revenue', reportController.revenueReport);
-router.get('/orders', reportController.ordersReport);
-router.get('/delivery-performance', reportController.deliveryPerformanceReport);
+router.get('/sales', reportController.getSalesReport);
 
 module.exports = router;

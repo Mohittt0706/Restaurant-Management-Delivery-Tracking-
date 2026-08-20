@@ -1,51 +1,13 @@
-const env = require('../config/env');
-
-class ApiError extends Error {
-  constructor(statusCode, message, details) {
-    super(message);
-    this.statusCode = statusCode;
-    this.details = details;
-  }
-}
-
-function notFoundHandler(req, res) {
-  res.status(404).json({
-    success: false,
-    error: {
-      message: `Route not found: ${req.method} ${req.originalUrl}`,
-    },
-  });
-}
-
-function errorHandler(err, req, res, next) {
-  if (res.headersSent) {
-    return next(err);
-  }
-
+const errorMiddleware = (err, req, res, next) => {
+  console.error(err.stack);
   const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal server error';
-
-  if (statusCode >= 500) {
-    console.error('[error]', err);
-    if (env.NODE_ENV === 'production') {
-      return res.status(500).json({
-        success: false,
-        error: { message: 'Internal server error.' },
-      });
-    }
-  }
+  const message = err.message || 'Internal Server Error';
 
   res.status(statusCode).json({
     success: false,
-    error: {
-      message,
-      ...(err.details ? { details: err.details } : {}),
-    },
+    message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
-}
-
-module.exports = {
-  ApiError,
-  notFoundHandler,
-  errorHandler,
 };
+
+module.exports = errorMiddleware;

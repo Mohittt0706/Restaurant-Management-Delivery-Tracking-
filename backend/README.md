@@ -1,29 +1,33 @@
-# CULT Backend
+# CULT — RESTAURANT MANAGEMENT BACKEND
 
-Node.js + Express + Prisma (PostgreSQL) backend for the CULT Restaurant Management & Delivery Tracking project.
+Backend API built with Node.js, Express, and Prisma for Cult Restaurant Management & Delivery Tracking.
 
-## Structure
+## Directory Structure
 
-- `src/config/` – Prisma client singleton and env configuration
-- `src/controllers/` – request handlers
-- `src/routes/` – API route definitions
-- `src/middleware/` – auth, role, validation, and error middleware
-- `src/services/` – business logic and external integrations (payment, maps, weather, invoice)
-- `src/utils/` – shared helpers and constants
-- `src/validators/` – request validation schemas
-- `prisma/` – Prisma schema and database seed script
+```
+backend/
+├── src/
+│   ├── config/
+│   ├── controllers/
+│   ├── routes/
+│   ├── middleware/
+│   ├── services/
+│   ├── utils/
+│   ├── validators/
+│   ├── app.js
+│   └── server.js
+├── prisma/
+│   ├── schema.prisma
+│   └── seed.js
+├── .env
+├── .env.example
+├── .gitignore
+├── package.json
+└── README.md
+```
 
-## Roles
+## Running locally
 
-- `ADMIN` – admin dashboard
-- `KITCHEN` – kitchen dashboard
-- `DELIVERY` – delivery dashboard
-- `CUSTOMER` – customer app
-
-## Prisma
-
-Prisma is the only ORM. All models live exclusively in `prisma/schema.prisma` (to be added).
-
-## Setup
-
-Prisma schema, seed, and API implementation to be added in upcoming steps.
+```bash
+npm run dev
+```

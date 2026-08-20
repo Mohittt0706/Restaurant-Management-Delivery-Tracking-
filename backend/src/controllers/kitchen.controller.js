@@ -1,34 +1,44 @@
 const kitchenService = require('../services/kitchen.service');
 
-async function listKitchenOrders(req, res, next) {
+const getActiveOrders = async (req, res, next) => {
   try {
-    const orders = await kitchenService.listKitchenOrders();
+    const orders = await kitchenService.getActiveOrders();
     res.status(200).json({ success: true, data: orders });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function getKitchenOrder(req, res, next) {
+const acceptOrder = async (req, res, next) => {
   try {
-    const order = await kitchenService.getKitchenOrder(req.params.id);
+    const order = await kitchenService.acceptOrder(req.params.id, req.user.id);
     res.status(200).json({ success: true, data: order });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function updateKitchenStatus(req, res, next) {
+const markPreparing = async (req, res, next) => {
   try {
-    const order = await kitchenService.updateKitchenStatus(req.params.id, req.body.status);
+    const order = await kitchenService.acceptOrder(req.params.id, req.user.id);
     res.status(200).json({ success: true, data: order });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
+};
+
+const markReady = async (req, res, next) => {
+  try {
+    const order = await kitchenService.markReady(req.params.id, req.user.id);
+    res.status(200).json({ success: true, data: order });
+  } catch (err) {
+    next(err);
+  }
+};
 
 module.exports = {
-  listKitchenOrders,
-  getKitchenOrder,
-  updateKitchenStatus,
+  getActiveOrders,
+  acceptOrder,
+  markPreparing,
+  markReady,
 };

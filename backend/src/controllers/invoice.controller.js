@@ -1,24 +1,12 @@
 const invoiceService = require('../services/invoice.service');
 
-async function listInvoices(req, res, next) {
+const getInvoice = async (req, res, next) => {
   try {
-    const invoices = await invoiceService.listInvoices();
-    res.status(200).json({ success: true, data: invoices });
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function getInvoice(req, res, next) {
-  try {
-    const invoice = await invoiceService.getInvoice(req.params.id);
+    const invoice = await invoiceService.getInvoiceByOrderId(req.params.orderId, req.user.id, req.user.role);
     res.status(200).json({ success: true, data: invoice });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-}
-
-module.exports = {
-  listInvoices,
-  getInvoice,
 };
+
+module.exports = { getInvoice };

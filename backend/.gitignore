@@ -1,13 +1,5 @@
-# Dependencies
-node_modules/
-
-# Environment variables
+node_modules
+# Keep environment variables out of version control
 .env
 
-# Logs
-*.log
-npm-debug.log*
-
-# Build output
-dist/
-build/
+/generated/prisma

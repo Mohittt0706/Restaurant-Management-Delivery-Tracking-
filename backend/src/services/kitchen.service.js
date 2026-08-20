@@ -1,58 +1,76 @@
 const prisma = require('../config/prisma');
-const { ApiError } = require('../middleware/error.middleware');
-const { KITCHEN_STATUSES } = require('../utils/orderStatus');
-const { serializeOrder, ORDER_INCLUDE } = require('./order.service');
 
-function withPreparationTime(order) {
-  const start = order.createdAt.getTime();
-  const end = order.status === 'READY' ? order.updatedAt.getTime() : Date.now();
-  return {
-    ...order,
-    preparationMinutes: Math.max(0, Math.round((end - start) / 60000)),
-  };
-}
-
-async function listKitchenOrders() {
-  const orders = await prisma.order.findMany({
-    where: { status: { in: KITCHEN_STATUSES } },
-    include: ORDER_INCLUDE,
-    orderBy: { createdAt: 'asc' },
-  });
-
-  return orders.map((o) => withPreparationTime(serializeOrder(o)));
-}
-
-async function getKitchenOrder(id) {
-  const order = await prisma.order.findUnique({
-    where: { id },
-    include: ORDER_INCLUDE,
-  });
-  if (!order) throw new ApiError(404, 'Order not found.');
-  return withPreparationTime(serializeOrder(order));
-}
-
-async function updateKitchenStatus(id, status) {
-  if (!['PREPARING', 'READY'].includes(status)) {
-    throw new ApiError(400, 'Kitchen can only move orders to PREPARING or READY.');
+class KitchenService {
+  async getActiveOrders() {
+    return await prisma.order.findMany({
+      where: {
+        status: { in: ['CONFIRMED', 'PREPARING', 'READY'] },
+      },
+      include: {
+        user: { select: { id: true, name: true, phone: true } },
+        items: { include: { menuItem: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
   }
 
-  const existing = await prisma.order.findUnique({ where: { id } });
-  if (!existing) throw new ApiError(404, 'Order not found.');
-  if (!KITCHEN_STATUSES.includes(existing.status)) {
-    throw new ApiError(409, 'Order is no longer in the kitchen queue.');
+  async acceptOrder(orderId, kitchenUserId) {
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      const error = new Error('Order not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (order.status !== 'CONFIRMED' && order.status !== 'PLACED') {
+      const error = new Error(`Cannot accept order in status "${order.status}"`);
+      error.statusCode = 409;
+      throw error;
+    }
+
+    return await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'PREPARING',
+        statusHistory: {
+          create: {
+            status: 'PREPARING',
+            changedByUserId: kitchenUserId,
+          },
+        },
+      },
+      include: { items: { include: { menuItem: true } } },
+    });
   }
 
-  const order = await prisma.order.update({
-    where: { id },
-    data: { status },
-    include: ORDER_INCLUDE,
-  });
+  async markReady(orderId, kitchenUserId) {
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      const error = new Error('Order not found');
+      error.statusCode = 404;
+      throw error;
+    }
 
-  return withPreparationTime(serializeOrder(order));
+    if (order.status !== 'PREPARING') {
+      const error = new Error(`Order must be in PREPARING state to mark as READY (current: "${order.status}")`);
+      error.statusCode = 409;
+      throw error;
+    }
+
+    return await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'READY',
+        statusHistory: {
+          create: {
+            status: 'READY',
+            changedByUserId: kitchenUserId,
+          },
+        },
+      },
+      include: { items: { include: { menuItem: true } } },
+    });
+  }
 }
 
-module.exports = {
-  listKitchenOrders,
-  getKitchenOrder,
-  updateKitchenStatus,
-};
+module.exports = new KitchenService();

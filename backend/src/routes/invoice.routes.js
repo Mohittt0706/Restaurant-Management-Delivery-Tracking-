@@ -1,14 +1,10 @@
 const express = require('express');
-
-const invoiceController = require('../controllers/invoice.controller');
-const { authenticate } = require('../middleware/auth.middleware');
-const { requireRole, ROLES } = require('../middleware/role.middleware');
-
 const router = express.Router();
+const invoiceController = require('../controllers/invoice.controller');
+const authMiddleware = require('../middleware/auth.middleware');
 
-router.use(authenticate, requireRole(ROLES.ADMIN));
+router.use(authMiddleware);
 
-router.get('/', invoiceController.listInvoices);
-router.get('/:id', invoiceController.getInvoice);
+router.get('/:orderId', invoiceController.getInvoice);
 
 module.exports = router;

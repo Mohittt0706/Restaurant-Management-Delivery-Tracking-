@@ -1,27 +1,10 @@
-const { ApiError } = require('./error.middleware');
-
-const ROLES = {
-  CUSTOMER: 'CUSTOMER',
-  ADMIN: 'ADMIN',
-  KITCHEN: 'KITCHEN',
-  DELIVERY: 'DELIVERY',
-};
-
-function requireRole(...allowedRoles) {
+const roleMiddleware = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user) {
-      return next(new ApiError(401, 'Authentication required.'));
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access forbidden: Insufficient permissions' });
     }
-
-    if (!allowedRoles.includes(req.user.role)) {
-      return next(new ApiError(403, 'You do not have permission to perform this action.'));
-    }
-
     next();
   };
-}
-
-module.exports = {
-  ROLES,
-  requireRole,
 };
+
+module.exports = roleMiddleware;
