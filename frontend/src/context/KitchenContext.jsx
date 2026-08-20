@@ -1,4 +1,5 @@
-import { createContext, useContext, useReducer, useCallback } from 'react';
+import { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
+import { kitchenService } from '../services/kitchenService';
 
 const KitchenContext = createContext(null);
 
@@ -10,43 +11,37 @@ const STATUSES = {
 
 function kitchenReducer(state, action) {
   switch (action.type) {
-    case 'ACCEPT_ORDER': {
-      const order = state.orders.find((o) => o.id === action.payload);
-      if (!order || order.status !== STATUSES.NEW) return state;
-      return {
-        ...state,
-        orders: state.orders.map((o) =>
-          o.id === action.payload
-            ? { ...o, status: STATUSES.PREPARING, acceptedAt: Date.now() }
-            : o
-        ),
-      };
-    }
-    case 'MARK_READY': {
-      const order = state.orders.find((o) => o.id === action.payload);
-      if (!order || order.status !== STATUSES.PREPARING) return state;
-      return {
-        ...state,
-        orders: state.orders.map((o) =>
-          o.id === action.payload
-            ? {
-                ...o,
-                status: STATUSES.READY,
-                readyAt: Date.now(),
-                preparationTime: Date.now() - o.acceptedAt,
-              }
-            : o
-        ),
-      };
-    }
-    case 'SET_ORDERS': {
-      return { ...state, orders: action.payload, loading: false };
-    }
-    case 'SET_LOADING': {
+    case 'SET_NEW_ORDERS':
+      return { ...state, newOrders: action.payload };
+    case 'SET_PREPARING_ORDERS':
+      return { ...state, preparingOrders: action.payload };
+    case 'SET_READY_ORDERS':
+      return { ...state, readyOrders: action.payload };
+    case 'SET_LOADING':
       return { ...state, loading: action.payload };
-    }
-    case 'SET_ERROR': {
+    case 'SET_ERROR':
       return { ...state, error: action.payload, loading: false };
+    case 'MOVE_TO_PREPARING': {
+      const { orderId, updatedOrder } = action.payload;
+      return {
+        ...state,
+        newOrders: state.newOrders.filter((o) => o.id !== orderId),
+        preparingOrders: [
+          ...state.preparingOrders.filter((o) => o.id !== orderId),
+          updatedOrder,
+        ],
+      };
+    }
+    case 'MOVE_TO_READY': {
+      const { orderId, updatedOrder } = action.payload;
+      return {
+        ...state,
+        preparingOrders: state.preparingOrders.filter((o) => o.id !== orderId),
+        readyOrders: [
+          ...state.readyOrders.filter((o) => o.id !== orderId),
+          updatedOrder,
+        ],
+      };
     }
     default:
       return state;
@@ -54,7 +49,9 @@ function kitchenReducer(state, action) {
 }
 
 const initialState = {
-  orders: [],
+  newOrders: [],
+  preparingOrders: [],
+  readyOrders: [],
   loading: true,
   error: null,
 };
@@ -62,42 +59,77 @@ const initialState = {
 export function KitchenProvider({ children }) {
   const [state, dispatch] = useReducer(kitchenReducer, initialState);
 
-  const acceptOrder = useCallback((orderId) => {
-    dispatch({ type: 'ACCEPT_ORDER', payload: orderId });
+  const fetchAllOrders = useCallback(async () => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const [newRes, prepRes, readyRes] = await Promise.all([
+        kitchenService.getNewOrders().catch(() => []),
+        kitchenService.getPreparingOrders().catch(() => []),
+        kitchenService.getReadyOrders().catch(() => []),
+      ]);
+
+      dispatch({ type: 'SET_NEW_ORDERS', payload: newRes });
+      dispatch({ type: 'SET_PREPARING_ORDERS', payload: prepRes });
+      dispatch({ type: 'SET_READY_ORDERS', payload: readyRes });
+      dispatch({ type: 'SET_ERROR', payload: null });
+    } catch (err) {
+      console.error('Error fetching kitchen orders:', err);
+      dispatch({ type: 'SET_ERROR', payload: 'Unable to load kitchen orders.' });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
   }, []);
 
-  const markReady = useCallback((orderId) => {
-    dispatch({ type: 'MARK_READY', payload: orderId });
-  }, []);
+  useEffect(() => {
+    fetchAllOrders();
+  }, [fetchAllOrders]);
 
-  const setOrders = useCallback((orders) => {
-    dispatch({ type: 'SET_ORDERS', payload: orders });
-  }, []);
+  const acceptOrder = useCallback(async (orderId) => {
+    try {
+      const updated = await kitchenService.acceptOrder(orderId);
+      if (updated) {
+        dispatch({
+          type: 'MOVE_TO_PREPARING',
+          payload: { orderId, updatedOrder: updated },
+        });
+      } else {
+        await fetchAllOrders();
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('Accept order error:', err);
+      const msg = err?.message || 'Unable to accept order. Please try again.';
+      return { success: false, message: msg };
+    }
+  }, [fetchAllOrders]);
 
-  const setLoading = useCallback((loading) => {
-    dispatch({ type: 'SET_LOADING', payload: loading });
-  }, []);
-
-  const setError = useCallback((error) => {
-    dispatch({ type: 'SET_ERROR', payload: error });
-  }, []);
-
-  const newOrders = state.orders.filter((o) => o.status === STATUSES.NEW);
-  const preparingOrders = state.orders.filter((o) => o.status === STATUSES.PREPARING);
-  const readyOrders = state.orders.filter((o) => o.status === STATUSES.READY);
+  const markReady = useCallback(async (orderId) => {
+    try {
+      const updated = await kitchenService.markOrderReady(orderId);
+      if (updated) {
+        dispatch({
+          type: 'MOVE_TO_READY',
+          payload: { orderId, updatedOrder: updated },
+        });
+      } else {
+        await fetchAllOrders();
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('Mark ready error:', err);
+      const msg = err?.message || 'Unable to mark order ready. Please try again.';
+      return { success: false, message: msg };
+    }
+  }, [fetchAllOrders]);
 
   return (
     <KitchenContext.Provider
       value={{
         ...state,
-        newOrders,
-        preparingOrders,
-        readyOrders,
+        orders: [...state.newOrders, ...state.preparingOrders, ...state.readyOrders],
         acceptOrder,
         markReady,
-        setOrders,
-        setLoading,
-        setError,
+        refreshOrders: fetchAllOrders,
       }}
     >
       {children}

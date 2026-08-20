@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Inbox, Loader2 } from 'lucide-react';
+import { Inbox, Loader2, RefreshCw } from 'lucide-react';
 import { useKitchen } from '../../context/KitchenContext';
 import { fadeInUp, staggerContainer } from '../../animations/variants';
 
 function NewOrderCard({ order }) {
   const { acceptOrder } = useKitchen();
   const [accepting, setAccepting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     setAccepting(true);
-    setTimeout(() => {
-      acceptOrder(order.id);
-      setAccepting(false);
-    }, 800);
+    setErrorMsg(null);
+    const res = await acceptOrder(order.id);
+    setAccepting(false);
+    if (!res.success) {
+      setErrorMsg(res.message);
+    }
   };
 
   return (
@@ -22,38 +25,41 @@ function NewOrderCard({ order }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -100 }}
-      className="bg-cult-espresso border border-cult-bronze/20 p-6"
+      className="bg-cult-espresso border border-cult-bronze/20 p-6 flex flex-col justify-between"
     >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-display text-lg tracking-wider text-cult-cream">
-          #{order.id}
-        </h3>
-        <span className="font-body text-xs tracking-widest uppercase px-3 py-1 bg-cult-gold/10 text-cult-gold border border-cult-gold/30">
-          NEW
-        </span>
-      </div>
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-display text-lg tracking-wider text-cult-cream">
+            {order.displayNumber}
+          </h3>
+          <span className="font-body text-xs tracking-widest uppercase px-3 py-1 bg-cult-gold/10 text-cult-gold border border-cult-gold/30">
+            NEW
+          </span>
+        </div>
 
-      <div className="space-y-2 mb-4">
-        {order.items.map((item, i) => (
-          <p key={i} className="font-body text-sm text-cult-warmgray">
-            {item.name} <span className="text-cult-cream">× {item.quantity}</span>
-          </p>
-        ))}
-      </div>
+        <div className="space-y-2 mb-4">
+          {order.items.map((item, i) => (
+            <p key={i} className="font-body text-sm text-cult-warmgray">
+              {item.name} <span className="text-cult-cream">× {item.quantity}</span>
+            </p>
+          ))}
+        </div>
 
-      <div className="space-y-2 mb-4 text-sm">
-        <p className="font-body text-cult-warmgray">
-          Payment: <span className="text-cult-cream">{order.paymentStatus}</span>
-        </p>
-        {order.specialRequirement && (
-          <div>
-            <p className="font-body text-cult-warmgray">Special Requirement:</p>
-            <p className="font-body text-cult-cream italic">{order.specialRequirement}</p>
-          </div>
-        )}
-        {order.priority && (
+        <div className="space-y-2 mb-4 text-sm">
           <p className="font-body text-cult-warmgray">
-            Priority: <span className="text-cult-cream">{order.priority}</span>
+            Payment: <span className="text-cult-cream uppercase">{order.paymentStatus}</span>
+          </p>
+          {order.specialRequirement && (
+            <div>
+              <p className="font-body text-cult-warmgray">Special Requirement:</p>
+              <p className="font-body text-cult-cream italic">{order.specialRequirement}</p>
+            </div>
+          )}
+        </div>
+
+        {errorMsg && (
+          <p className="font-body text-xs text-red-400 mb-3 bg-red-950/40 p-2 border border-red-800/40">
+            {errorMsg}
           </p>
         )}
       </div>
@@ -77,12 +83,28 @@ function NewOrderCard({ order }) {
 }
 
 export default function KitchenNewOrders() {
-  const { newOrders, loading } = useKitchen();
+  const { newOrders, loading, error, refreshOrders } = useKitchen();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-cult-ember border-t-transparent rounded-full animate-spin" />
+      <div className="flex flex-col items-center justify-center h-64">
+        <div className="w-8 h-8 border-2 border-cult-ember border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="font-body text-xs uppercase tracking-widest text-cult-warmgray">Loading kitchen orders...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <p className="font-heading text-lg text-cult-cream mb-4">{error}</p>
+        <button
+          onClick={refreshOrders}
+          className="inline-flex items-center gap-2 font-body text-xs tracking-widest uppercase bg-cult-ember px-6 py-3 text-cult-cream hover:bg-cult-deep-red transition-colors"
+        >
+          <RefreshCw size={14} />
+          Try Again
+        </button>
       </div>
     );
   }
