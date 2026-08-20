@@ -3,8 +3,11 @@ import {
   LayoutDashboard, 
   Package, 
   MapPin, 
-  Truck 
+  Truck,
+  LogOut
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -14,6 +17,14 @@ const navItems = [
 ];
 
 export default function Sidebar({ activeSection, onSelectSection }) {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   return (
     <aside className="w-64 bg-cult-espresso border-r border-cult-bronze min-h-screen flex flex-col fixed left-0 top-0 bottom-0 z-40">
       {/* Brand Logo */}
@@ -48,9 +59,16 @@ export default function Sidebar({ activeSection, onSelectSection }) {
         })}
       </nav>
 
-      {/* Footer info */}
-      <div className="p-4 border-t border-cult-bronze text-center">
-        <p className="text-[10px] font-mono text-cult-warmgray/60 uppercase tracking-widest">
+      {/* Footer info & Logout */}
+      <div className="p-4 border-t border-cult-bronze space-y-2">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-3 w-full font-body text-sm tracking-wide text-cult-warmgray hover:text-red-400 transition-colors duration-200 cursor-pointer"
+        >
+          <LogOut size={18} />
+          Logout
+        </button>
+        <p className="text-[10px] font-mono text-cult-warmgray/60 uppercase tracking-widest text-center">
           CULT Delivery Partner v1.0
         </p>
       </div>

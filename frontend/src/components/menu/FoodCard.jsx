@@ -15,8 +15,12 @@ export default function FoodCard({ item }) {
       <Link to={`/menu/${item.id}`} className="block">
         <div className="relative h-60 overflow-hidden">
           <img
-            src={item.image}
+            src={item.image || '/assets/images/dish-1.jpg'}
             alt={item.name}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/assets/images/dish-1.jpg';
+            }}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-cult-charcoal/80 to-transparent" />

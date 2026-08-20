@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Check, Loader2 } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import Footer from '../components/Footer/Footer';
 import { fadeIn, fadeInUp, staggerContainer } from '../animations/variants';
 
@@ -17,54 +17,18 @@ export default function CartPage() {
     removeItem,
     setSpecialPreference,
     setCutlery,
-    resetCart,
   } = useCart();
 
-  const [orderStatus, setOrderStatus] = useState('idle'); // idle | placing | success
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   const handlePlaceOrder = () => {
-    setOrderStatus('placing');
-    setTimeout(() => {
-      setOrderStatus('success');
-    }, 1500);
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    navigate('/checkout');
   };
-
-  const handleReset = () => {
-    resetCart();
-    setOrderStatus('idle');
-  };
-
-  if (orderStatus === 'success') {
-    return (
-      <main className="min-h-screen bg-cult-charcoal pt-24 pb-16 flex flex-col items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-center max-w-md mx-auto px-6"
-        >
-          <div className="w-20 h-20 bg-cult-ember/20 border border-cult-ember/40 flex items-center justify-center mx-auto mb-8">
-            <Check size={36} className="text-cult-ember" />
-          </div>
-          <h1 className="font-display text-4xl md:text-5xl tracking-widest text-cult-cream mb-4">
-            ORDER PLACED
-          </h1>
-          <p className="font-heading text-lg text-cult-gold italic mb-2">
-            Successfully!
-          </p>
-          <p className="font-body text-cult-warmgray mb-10">
-            Thank you for your order. We&apos;ll have it ready for you shortly.
-          </p>
-          <button
-            onClick={handleReset}
-            className="font-body text-sm tracking-widest uppercase text-cult-cream bg-cult-ember px-8 py-3.5 hover:bg-cult-deep-red transition-colors duration-300"
-          >
-            Start New Order
-          </button>
-        </motion.div>
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-cult-charcoal pt-24 pb-16">
@@ -312,17 +276,9 @@ export default function CartPage() {
                 {/* Place Order */}
                 <button
                   onClick={handlePlaceOrder}
-                  disabled={orderStatus === 'placing'}
-                  className="w-full font-body text-sm tracking-widest uppercase text-cult-cream bg-cult-ember py-4 mt-8 hover:bg-cult-deep-red transition-colors duration-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full font-body text-sm tracking-widest uppercase text-cult-cream bg-cult-ember py-4 mt-8 hover:bg-cult-deep-red transition-colors duration-300 flex items-center justify-center gap-2"
                 >
-                  {orderStatus === 'placing' ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin" />
-                      Placing Order...
-                    </>
-                  ) : (
-                    'Place Order'
-                  )}
+                  Place Order
                 </button>
               </div>
             </div>
