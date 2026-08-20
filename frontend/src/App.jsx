@@ -9,6 +9,12 @@ import MenuPage from './pages/MenuPage';
 import FoodDetailsPage from './pages/FoodDetailsPage';
 import CartPage from './pages/CartPage';
 import { CartProvider } from './context/CartContext';
+import { KitchenProvider } from './context/KitchenContext';
+import KitchenLayout from './pages/kitchen/KitchenLayout';
+import KitchenDashboard from './pages/kitchen/KitchenDashboard';
+import KitchenNewOrders from './pages/kitchen/KitchenNewOrders';
+import KitchenPreparing from './pages/kitchen/KitchenPreparing';
+import KitchenReady from './pages/kitchen/KitchenReady';
 
 function Layout() {
   const location = useLocation();
@@ -27,6 +33,19 @@ function Layout() {
         <Route path="/register" element={<Register />} />
         <Route path="/manager" element={<ManagerDashboardPage />} />
         <Route path="/dashboard" element={<ManagerDashboardPage />} />
+        <Route
+          path="/kitchen"
+          element={
+            <KitchenProvider>
+              <KitchenLayout />
+            </KitchenProvider>
+          }
+        >
+          <Route index element={<KitchenDashboard />} />
+          <Route path="new-orders" element={<KitchenNewOrders />} />
+          <Route path="preparing" element={<KitchenPreparing />} />
+          <Route path="ready" element={<KitchenReady />} />
+        </Route>
       </Routes>
     </>
   );
