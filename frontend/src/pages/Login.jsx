@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Eye, EyeOff } from 'lucide-react';
 import Toast from '../components/common/Toast';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   const handleSubmit = (e) => {
@@ -77,15 +79,29 @@ export default function Login() {
             >
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-cult-charcoal border border-cult-bronze text-cult-cream px-4 py-3 text-sm font-body outline-none focus:border-cult-ember transition-colors duration-300 placeholder:text-cult-warmgray/40"
-            />
+            <div className="relative flex items-center">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-cult-charcoal border border-cult-bronze text-cult-cream pl-4 pr-11 py-3 text-sm font-body outline-none focus:border-cult-ember transition-colors duration-300 placeholder:text-cult-warmgray/40"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 text-cult-warmgray hover:text-cult-cream transition-colors duration-200 p-1 cursor-pointer"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4 text-cult-warmgray hover:text-cult-cream" />
+                ) : (
+                  <Eye className="w-4 h-4 text-cult-warmgray hover:text-cult-cream" />
+                )}
+              </button>
+            </div>
 
             {/* Forgot Password Link (UI Only Placeholder) */}
             <div className="flex justify-end mt-2">
