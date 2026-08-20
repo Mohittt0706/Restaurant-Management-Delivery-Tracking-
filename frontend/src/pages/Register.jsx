@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
 import Toast from '../components/common/Toast';
 
 export default function Register() {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
   const [email, setEmail] = useState('');
@@ -18,8 +20,11 @@ export default function Register() {
       return;
     }
 
-    // Trigger success notification (UI simulation only - no backend storage)
+    // Trigger success notification and automatically redirect to Login page
     setShowToast(true);
+    setTimeout(() => {
+      navigate('/login');
+    }, 1500);
   };
 
   return (
