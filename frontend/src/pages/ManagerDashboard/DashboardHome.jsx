@@ -9,14 +9,17 @@ import {
   Bike 
 } from 'lucide-react';
 
-export default function DashboardHome({ orders = [] }) {
-  // Compute dynamic stats based only on real local state orders array
-  const totalOrders = orders.length;
-  const todaysRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
-  const pendingOrders = orders.filter((o) => o.orderStatus === 'Placed' || o.orderStatus === 'Pending').length;
-  const preparingOrders = orders.filter((o) => o.orderStatus === 'Preparing').length;
-  const deliveredOrders = orders.filter((o) => o.orderStatus === 'Delivered').length;
-  const activeDeliveries = orders.filter((o) => o.orderStatus === 'Out for Delivery' || o.orderStatus === 'Assigned').length;
+export default function DashboardHome({ orders = [], stats = null }) {
+  const fromOrders = {
+    totalOrders: orders.length,
+    todaysRevenue: orders.reduce((sum, o) => sum + (o.amount || 0), 0),
+    pendingOrders: orders.filter((o) => o.orderStatus === 'CONFIRMED' || o.orderStatus === 'PLACED' || o.orderStatus === 'Pending').length,
+    preparingOrders: orders.filter((o) => o.orderStatus === 'PREPARING').length,
+    deliveredOrders: orders.filter((o) => o.orderStatus === 'DELIVERED').length,
+    activeDeliveries: orders.filter((o) => o.assignedPartnerId || o.orderStatus === 'OUT_FOR_DELIVERY' || o.orderStatus === 'ASSIGNED').length,
+  };
+
+  const s = stats || fromOrders;
 
   return (
     <div className="space-y-6">
@@ -25,37 +28,37 @@ export default function DashboardHome({ orders = [] }) {
         <StatCard
           icon={ShoppingBag}
           label="Total Orders"
-          value={totalOrders}
+          value={s.totalOrders}
         />
         <StatCard
           icon={IndianRupee}
           label="Today's Revenue"
-          value={`₹${todaysRevenue}`}
+          value={`₹${s.todaysRevenue}`}
         />
         <StatCard
           icon={Clock}
           label="Pending Orders"
-          value={pendingOrders}
+          value={s.pendingOrders}
         />
         <StatCard
           icon={Flame}
           label="Preparing Orders"
-          value={preparingOrders}
+          value={s.preparingOrders}
         />
         <StatCard
           icon={CheckCircle2}
           label="Delivered Orders"
-          value={deliveredOrders}
+          value={s.deliveredOrders}
         />
         <StatCard
           icon={Bike}
           label="Active Deliveries"
-          value={activeDeliveries}
+          value={s.activeDeliveries}
         />
       </div>
 
       {/* Empty State Banner */}
-      {totalOrders === 0 && (
+      {s.totalOrders === 0 && (
         <div className="p-8 bg-cult-espresso border border-cult-bronze text-center space-y-2">
           <p className="text-xs font-mono text-cult-ember uppercase tracking-widest">
             System Initialized — Ready for Operation

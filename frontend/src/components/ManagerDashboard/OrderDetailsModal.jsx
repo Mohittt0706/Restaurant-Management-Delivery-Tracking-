@@ -1,8 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
-export default function OrderDetailsModal({ isOpen, onClose, order }) {
+const STATUS_OPTIONS = ['CONFIRMED', 'PREPARING', 'READY', 'ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
+
+export default function OrderDetailsModal({ isOpen, onClose, order, onUpdateStatus }) {
+  const [status, setStatus] = useState('');
+
+  useEffect(() => {
+    if (order?.orderStatus) setStatus(order.orderStatus);
+  }, [order]);
+
   if (!isOpen || !order) return null;
+
+  const handleUpdateStatus = () => {
+    if (status && status !== order.orderStatus && onUpdateStatus) {
+      onUpdateStatus(order.id, status);
+      onClose();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -66,6 +81,28 @@ export default function OrderDetailsModal({ isOpen, onClose, order }) {
           <span className="text-sm font-bold uppercase tracking-widest text-cult-cream">Total Amount</span>
           <span className="font-display text-2xl text-cult-ember font-bold">₹{order.amount}</span>
         </div>
+
+        {/* Update Status Control */}
+        {onUpdateStatus && (
+          <div className="flex items-center gap-3 pt-1">
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="flex-1 bg-cult-charcoal border border-cult-bronze text-cult-cream px-3 py-2.5 text-xs font-mono uppercase outline-none focus:border-cult-ember"
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <button
+              onClick={handleUpdateStatus}
+              disabled={!status || status === order.orderStatus}
+              className="px-4 py-2.5 bg-cult-ember text-cult-cream text-xs uppercase font-body tracking-widest hover:bg-cult-deep-red disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Update Status
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

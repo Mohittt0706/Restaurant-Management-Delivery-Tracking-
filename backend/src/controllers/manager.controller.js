@@ -38,9 +38,19 @@ const assignDelivery = async (req, res, next) => {
   }
 };
 
+const createDeliveryPartner = async (req, res, next) => {
+  try {
+    const partner = await deliveryService.createDeliveryPartner(req.body);
+    res.status(201).json({ success: true, data: partner });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getDashboardData,
   getManagerOrders,
   getDeliveryPartners,
   assignDelivery,
+  createDeliveryPartner,
 };

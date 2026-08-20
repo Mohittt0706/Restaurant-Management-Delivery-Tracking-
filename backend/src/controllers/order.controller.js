@@ -45,10 +45,20 @@ const getOrderTracking = async (req, res, next) => {
   }
 };
 
+const updateOrderStatus = async (req, res, next) => {
+  try {
+    const order = await orderService.updateStatus(req.params.id, req.body.status, req.user.id);
+    res.status(200).json({ success: true, data: order });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createOrder,
   getMyOrders,
   getOrderById,
   cancelOrder,
   getOrderTracking,
+  updateOrderStatus,
 };

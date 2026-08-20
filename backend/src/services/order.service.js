@@ -182,6 +182,36 @@ class OrderService {
       } : null,
     };
   }
+
+  async updateStatus(id, status, changedByUserId) {
+    const validStatuses = ['PLACED', 'CONFIRMED', 'PREPARING', 'READY', 'ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
+    if (!validStatuses.includes(status)) {
+      const error = new Error('Invalid order status');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const order = await prisma.order.findUnique({ where: { id } });
+    if (!order) {
+      const error = new Error('Order not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    return await prisma.order.update({
+      where: { id },
+      data: {
+        status,
+        statusHistory: { create: { status, changedByUserId } },
+      },
+      include: {
+        user: { select: { id: true, name: true, phone: true } },
+        items: { include: { menuItem: true } },
+        payment: true,
+        delivery: { include: { deliveryPartner: { select: { id: true, name: true, phone: true } } } },
+      },
+    });
+  }
 }
 
 module.exports = new OrderService();

@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import OrderDetailsModal from '../../components/ManagerDashboard/OrderDetailsModal';
 import { ShoppingBag, Eye } from 'lucide-react';
 
-export default function Orders({ orders = [] }) {
+export default function Orders({ orders = [], onUpdateStatus }) {
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const filterTabs = ['All', 'Placed', 'Preparing', 'Ready', 'Out for Delivery', 'Delivered'];
+  const filterTabs = ['All', 'CONFIRMED', 'PREPARING', 'READY', 'ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
 
   const filteredOrders = orders.filter((o) =>
     selectedStatus === 'All' ? true : o.orderStatus === selectedStatus
@@ -94,6 +94,7 @@ export default function Orders({ orders = [] }) {
         isOpen={!!selectedOrder}
         onClose={() => setSelectedOrder(null)}
         order={selectedOrder}
+        onUpdateStatus={onUpdateStatus}
       />
     </div>
   );

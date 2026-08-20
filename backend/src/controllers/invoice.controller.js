@@ -9,4 +9,13 @@ const getInvoice = async (req, res, next) => {
   }
 };
 
-module.exports = { getInvoice };
+const listInvoices = async (req, res, next) => {
+  try {
+    const invoices = await invoiceService.listInvoices();
+    res.status(200).json({ success: true, data: invoices });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getInvoice, listInvoices };

@@ -53,6 +53,25 @@ class InvoiceService {
       paymentStatus: order.paymentStatus,
     };
   }
+
+  async listInvoices() {
+    return await prisma.invoice.findMany({
+      include: {
+        order: {
+          select: {
+            id: true,
+            orderNumber: true,
+            totalAmount: true,
+            paymentMethod: true,
+            paymentStatus: true,
+            createdAt: true,
+            user: { select: { id: true, name: true, phone: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }
 
 module.exports = new InvoiceService();

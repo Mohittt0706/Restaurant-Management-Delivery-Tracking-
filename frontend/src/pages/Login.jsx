@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
 import Toast from '../components/common/Toast';
@@ -12,6 +13,14 @@ const [showPassword, setShowPassword] = useState(false);
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const { login, googleLogin } = useAuth();
+  const navigate = useNavigate();
+
+  const redirectByRole = (role) => {
+    if (role === 'MANAGER') navigate('/manager');
+    else if (role === 'KITCHEN') navigate('/kitchen');
+    else if (role === 'DELIVERY') navigate('/delivery-partner');
+    else navigate('/');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,8 +33,9 @@ const [showPassword, setShowPassword] = useState(false);
     setToast(null);
 
     try {
-      await login(email.trim(), password);
+      const user = await login(email.trim(), password);
       setToast({ type: 'success', message: 'Login Successful' });
+      setTimeout(() => redirectByRole(user?.role), 300);
     } catch (err) {
       setToast({ type: 'error', message: err.message || 'Unable to connect to server. Please try again.' });
     } finally {
@@ -43,8 +53,9 @@ const [showPassword, setShowPassword] = useState(false);
 
     try {
       const idToken = await getGoogleCredential();
-      await googleLogin(idToken);
+      const user = await googleLogin(idToken);
       setToast({ type: 'success', message: 'Login Successful' });
+      setTimeout(() => redirectByRole(user?.role), 300);
     } catch (err) {
       setToast({ type: 'error', message: err.message || 'Google sign-in failed. Please try again.' });
     } finally {

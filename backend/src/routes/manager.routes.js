@@ -10,6 +10,7 @@ router.use(roleMiddleware('MANAGER'));
 router.get('/dashboard', managerController.getDashboardData);
 router.get('/orders', managerController.getManagerOrders);
 router.get('/delivery-partners', managerController.getDeliveryPartners);
+router.post('/delivery-partners', managerController.createDeliveryPartner);
 router.post('/deliveries/:id/assign', managerController.assignDelivery);
 
 module.exports = router;

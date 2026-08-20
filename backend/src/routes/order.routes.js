@@ -10,6 +10,7 @@ router.post('/', roleMiddleware('CUSTOMER'), orderController.createOrder);
 router.get('/my', roleMiddleware('CUSTOMER'), orderController.getMyOrders);
 router.get('/:id/tracking', roleMiddleware('CUSTOMER'), orderController.getOrderTracking);
 router.get('/:id', orderController.getOrderById);
+router.patch('/:id/status', roleMiddleware('MANAGER'), orderController.updateOrderStatus);
 router.patch('/:id/cancel', roleMiddleware('CUSTOMER'), orderController.cancelOrder);
 
 module.exports = router;

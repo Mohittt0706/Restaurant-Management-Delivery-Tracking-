@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
-export default function MenuItemModal({ isOpen, onClose, onSave, itemToEdit }) {
+export default function MenuItemModal({ isOpen, onClose, onSave, itemToEdit, categories = [] }) {
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('Starters');
+  const [categoryId, setCategoryId] = useState('');
   const [price, setPrice] = useState('');
   const [available, setAvailable] = useState(true);
   const [image, setImage] = useState('');
@@ -11,18 +11,18 @@ export default function MenuItemModal({ isOpen, onClose, onSave, itemToEdit }) {
   useEffect(() => {
     if (itemToEdit) {
       setName(itemToEdit.name || '');
-      setCategory(itemToEdit.category || 'Starters');
+      setCategoryId(itemToEdit.categoryId || (categories[0]?.id ?? ''));
       setPrice(itemToEdit.price || '');
       setAvailable(itemToEdit.available !== undefined ? itemToEdit.available : true);
       setImage(itemToEdit.image || '');
     } else {
       setName('');
-      setCategory('Starters');
+      setCategoryId(categories[0]?.id ?? '');
       setPrice('');
       setAvailable(true);
       setImage('');
     }
-  }, [itemToEdit, isOpen]);
+  }, [itemToEdit, isOpen, categories]);
 
   if (!isOpen) return null;
 
@@ -33,7 +33,7 @@ export default function MenuItemModal({ isOpen, onClose, onSave, itemToEdit }) {
     onSave({
       id: itemToEdit ? itemToEdit.id : Date.now().toString(),
       name,
-      category,
+      categoryId,
       price: parseFloat(price),
       available,
       image: image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
@@ -76,14 +76,14 @@ export default function MenuItemModal({ isOpen, onClose, onSave, itemToEdit }) {
                 Category
               </label>
               <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
                 className="w-full bg-cult-charcoal border border-cult-bronze text-cult-cream px-3 py-2.5 text-sm font-body outline-none focus:border-cult-ember"
               >
-                <option value="Starters">Starters</option>
-                <option value="Main Course">Main Course</option>
-                <option value="Desserts">Desserts</option>
-                <option value="Beverages">Beverages</option>
+                {categories.length === 0 && <option value="">No categories — create one first</option>}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
               </select>
             </div>
 

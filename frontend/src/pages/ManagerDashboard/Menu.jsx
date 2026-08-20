@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import MenuItemModal from '../../components/ManagerDashboard/MenuItemModal';
 import { Plus, Edit2, Trash2, UtensilsCrossed, ToggleLeft, ToggleRight } from 'lucide-react';
 
-export default function Menu({ menuItems = [], onAddItem, onEditItem, onDeleteItem, onToggleAvailability }) {
+export default function Menu({ menuItems = [], categories = [], onAddItem, onEditItem, onDeleteItem, onToggleAvailability }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  const categories = ['All', 'Starters', 'Main Course', 'Desserts', 'Beverages'];
+  const categoryTabs = ['All', ...categories.map((c) => c.name)];
 
   const filteredItems = menuItems.filter((item) => 
     selectedCategory === 'All' ? true : item.category === selectedCategory
@@ -37,7 +37,7 @@ export default function Menu({ menuItems = [], onAddItem, onEditItem, onDeleteIt
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {/* Category Filters */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
-          {categories.map((cat) => (
+          {categoryTabs.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -149,6 +149,7 @@ export default function Menu({ menuItems = [], onAddItem, onEditItem, onDeleteIt
           }
         }}
         itemToEdit={itemToEdit}
+        categories={categories}
       />
 
       {/* Delete Confirmation Modal */}

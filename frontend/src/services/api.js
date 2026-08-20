@@ -52,7 +52,7 @@ export async function apiFetch(path, { method = 'GET', body, auth = false } = {}
     const message =
       Array.isArray(details) && details.length > 0
         ? details.map((d) => d.message).join(' ')
-        : json?.error?.message || 'Something went wrong. Please try again.';
+        : json?.error?.message || json?.message || 'Something went wrong. Please try again.';
     throw new ApiError(message, response.status, details);
   }
 

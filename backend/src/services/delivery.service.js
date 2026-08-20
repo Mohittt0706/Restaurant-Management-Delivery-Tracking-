@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const bcrypt = require('bcrypt');
 const { generateInvoiceNumber } = require('../utils/generateInvoice');
 
 class DeliveryService {
@@ -6,6 +7,36 @@ class DeliveryService {
     return await prisma.user.findMany({
       where: { role: 'DELIVERY', isActive: true },
       select: { id: true, name: true, email: true, phone: true, createdAt: true },
+    });
+  }
+
+  async createDeliveryPartner({ name, phone, email }) {
+    if (!name || !phone) {
+      const error = new Error('Name and phone are required');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const existing = await prisma.user.findFirst({ where: { phone } });
+    if (existing) {
+      const error = new Error('A user with this phone number already exists');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    const emailToUse = email || `delivery.${phone.replace(/\D/g, '').slice(-6)}@cult.com`;
+    const passwordHash = await bcrypt.hash('delivery123', 10);
+
+    return await prisma.user.create({
+      data: {
+        name,
+        phone,
+        email: emailToUse,
+        passwordHash,
+        role: 'DELIVERY',
+        isActive: true,
+      },
+      select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, createdAt: true },
     });
   }
 

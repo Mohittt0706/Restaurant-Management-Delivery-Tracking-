@@ -91,6 +91,94 @@ class ReportService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  async getRevenueReport() {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const paidOrders = await prisma.order.findMany({ where: { paymentStatus: 'PAID' } });
+    const totalRevenue = paidOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+    const todayRevenue = paidOrders.filter((o) => o.createdAt >= startOfDay).reduce((sum, o) => sum + o.totalAmount, 0);
+
+    const paymentGroups = await prisma.payment.groupBy({
+      by: ['method'],
+      _sum: { amount: true },
+    });
+
+    const dailyRevenue = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date();
+      dayStart.setDate(dayStart.getDate() - i);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+      const sum = paidOrders.filter((o) => o.createdAt >= dayStart && o.createdAt < dayEnd).reduce((s, o) => s + o.totalAmount, 0);
+      dailyRevenue.push({ date: dayStart.toISOString().slice(0, 10), revenue: Math.round(sum * 100) / 100 });
+    }
+
+    return {
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      todayRevenue: Math.round(todayRevenue * 100) / 100,
+      byPaymentMethod: paymentGroups.map((g) => ({ method: g.method, amount: Math.round((g._sum.amount || 0) * 100) / 100 })),
+      dailyRevenue,
+    };
+  }
+
+  async getOrdersReport() {
+    const totalOrders = await prisma.order.count();
+    const statusGroups = await prisma.order.groupBy({
+      by: ['status'],
+      _count: { id: true },
+    });
+
+    const dailyOrders = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date();
+      dayStart.setDate(dayStart.getDate() - i);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+      const count = await prisma.order.count({ where: { createdAt: { gte: dayStart, lt: dayEnd } } });
+      dailyOrders.push({ date: dayStart.toISOString().slice(0, 10), count });
+    }
+
+    return {
+      totalOrders,
+      byStatus: statusGroups.map((g) => ({ status: g.status, count: g._count.id })),
+      dailyOrders,
+    };
+  }
+
+  async getDeliveryPerformanceReport() {
+    const deliveries = await prisma.delivery.findMany({
+      include: { deliveryPartner: { select: { id: true, name: true } } },
+    });
+
+    const completed = deliveries.filter((d) => d.status === 'DELIVERED' && d.assignedAt && d.deliveredAt);
+
+    const avgAll = completed.length
+      ? completed.reduce((sum, d) => sum + (d.deliveredAt - d.assignedAt) / 60000, 0) / completed.length
+      : 0;
+
+    const byPartnerMap = {};
+    for (const d of completed) {
+      const name = d.deliveryPartner?.name || 'Unknown';
+      if (!byPartnerMap[name]) byPartnerMap[name] = { partner: name, deliveries: 0, totalMinutes: 0 };
+      byPartnerMap[name].deliveries += 1;
+      byPartnerMap[name].totalMinutes += (d.deliveredAt - d.assignedAt) / 60000;
+    }
+
+    return {
+      totalDeliveries: deliveries.length,
+      completedDeliveries: completed.length,
+      averageDeliveryMinutes: Math.round(avgAll * 100) / 100,
+      byPartner: Object.values(byPartnerMap).map((p) => ({
+        partner: p.partner,
+        deliveries: p.deliveries,
+        avgMinutes: Math.round((p.totalMinutes / p.deliveries) * 100) / 100,
+      })),
+    };
+  }
 }
 
 module.exports = new ReportService();
