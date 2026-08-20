@@ -14,6 +14,42 @@ enum UserRole {
   DELIVERY
 }
 
+enum OrderStatus {
+  PENDING
+  PLACED
+  PREPARING
+  READY
+  ASSIGNED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  RAZORPAY
+  COD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  COD
+}
+
+enum PartnerStatus {
+  AVAILABLE
+  BUSY
+  OFFLINE
+}
+
+enum DeliveryStatus {
+  ASSIGNED
+  PICKED_UP
+  OUT_FOR_DELIVERY
+  DELIVERED
+}
+
 model User {
   id           String               @id @default(uuid())
   name         String
@@ -25,6 +61,8 @@ model User {
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
   resetTokens  PasswordResetToken[]
+  orders       Order[]
+  invoices     Invoice[]
 }
 
 model PasswordResetToken {
@@ -38,4 +76,126 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model MenuCategory {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  items       MenuItem[]
+}
+
+model MenuItem {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal       @db.Decimal(10, 2)
+  categoryId  String
+  category    MenuCategory  @relation(fields: [categoryId], references: [id])
+  image       String?
+  isAvailable Boolean       @default(true)
+  isVeg       Boolean?
+  spiceLevel  Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  orderItems  OrderItem[]
+
+  @@index([categoryId])
+}
+
+model Order {
+  id                 String                @id @default(uuid())
+  orderNumber        String                @unique
+  customerId         String
+  customer           User                  @relation(fields: [customerId], references: [id])
+  status             OrderStatus           @default(PENDING)
+  paymentStatus      PaymentStatus         @default(PENDING)
+  paymentMethod      PaymentMethod?
+  subtotal           Decimal               @db.Decimal(10, 2)
+  tax                Decimal               @db.Decimal(10, 2)
+  deliveryFee        Decimal               @default(0) @db.Decimal(10, 2)
+  total              Decimal               @db.Decimal(10, 2)
+  specialInstructions String?
+  deliveryAddress    String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  items              OrderItem[]
+  payment            Payment?
+  invoice            Invoice?
+  deliveryAssignment DeliveryAssignment?
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String?
+  menuItem   MenuItem? @relation(fields: [menuItemId], references: [id])
+  name       String
+  price      Decimal  @db.Decimal(10, 2)
+  quantity   Int      @default(1)
+  notes      String?
+
+  @@index([orderId])
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  orderId           String        @unique
+  order             Order         @relation(fields: [orderId], references: [id])
+  method            PaymentMethod
+  status            PaymentStatus @default(PENDING)
+  amount            Decimal       @db.Decimal(10, 2)
+  razorpayPaymentId String?
+  razorpayOrderId   String?
+  createdAt         DateTime      @default(now())
+
+  @@index([status])
+}
+
+model Invoice {
+  id           String   @id @default(uuid())
+  invoiceNumber String   @unique
+  orderId      String   @unique
+  order        Order    @relation(fields: [orderId], references: [id])
+  customerId   String
+  customer     User     @relation(fields: [customerId], references: [id])
+  subtotal     Decimal  @db.Decimal(10, 2)
+  tax          Decimal  @db.Decimal(10, 2)
+  total        Decimal  @db.Decimal(10, 2)
+  createdAt    DateTime @default(now())
+
+  @@index([customerId])
+}
+
+model DeliveryPartner {
+  id        String        @id @default(uuid())
+  name      String
+  phone     String        @unique
+  vehicle   String?
+  status    PartnerStatus @default(AVAILABLE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  assignments DeliveryAssignment[]
+}
+
+model DeliveryAssignment {
+  id          String         @id @default(uuid())
+  orderId     String         @unique
+  order       Order          @relation(fields: [orderId], references: [id])
+  partnerId   String
+  partner     DeliveryPartner @relation(fields: [partnerId], references: [id])
+  status      DeliveryStatus @default(ASSIGNED)
+  assignedAt  DateTime       @default(now())
+  deliveredAt DateTime?
+  createdAt   DateTime       @default(now())
+
+  @@index([partnerId])
+  @@index([status])
 }
