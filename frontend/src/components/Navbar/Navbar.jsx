@@ -53,7 +53,6 @@ export default function Navbar() {
     { label: 'My Cart', to: '/cart', icon: ShoppingBag },
     { label: 'Active Order', to: '/orders/latest/tracking', icon: Clock },
     { label: 'Order History', to: '/order-history', icon: History },
-    { label: 'Delivery Address', to: '/address', icon: MapPin },
   ];
 
   return (
@@ -71,7 +70,8 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <div className="flex items-center justify-between h-18 lg:h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-3">
+              <img src="/cult-logo.jpg" alt="CULT Logo" className="w-9 h-9 object-cover rounded-full border border-cult-bronze/40" />
               <span className="font-display text-3xl lg:text-4xl tracking-widest text-cult-cream">
                 CULT
               </span>
