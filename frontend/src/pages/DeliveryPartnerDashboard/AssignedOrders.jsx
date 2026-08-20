@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
 import OrderDetailPanel from '../../components/DeliveryPartnerDashboard/OrderDetailPanel';
-import { Package, Eye, CheckCircle2, Plus } from 'lucide-react';
+import { Package, Eye, CheckCircle2 } from 'lucide-react';
 
-export default function AssignedOrders({ orders = [], onAcceptOrder, onAddTestOrder }) {
-  const [selectedOrder, setSelectedOrder] = useState(null);
+export default function AssignedOrders({ orders = [], onAcceptOrder, onSelectOrder, selectedOrder, onCloseOrder, orderLoading }) {
+  const [selectedId, setSelectedId] = useState(null);
+
+  const handleView = (ord) => {
+    setSelectedId(ord.id);
+    onSelectOrder(ord.id);
+  };
+
+  const handleClose = () => {
+    setSelectedId(null);
+    onCloseOrder();
+  };
 
   return (
     <div className="space-y-6">
@@ -13,14 +23,6 @@ export default function AssignedOrders({ orders = [], onAcceptOrder, onAddTestOr
           <h2 className="font-heading text-lg text-cult-cream">Assigned Orders List</h2>
           <p className="text-xs font-body text-cult-warmgray">Review details and accept orders for dispatch</p>
         </div>
-
-        <button
-          onClick={onAddTestOrder}
-          className="bg-cult-ember text-cult-cream px-4 py-2 text-xs uppercase font-body tracking-widest font-medium hover:bg-cult-deep-red transition-colors flex items-center gap-2 cursor-pointer shadow-lg"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Simulate Incoming Order</span>
-        </button>
       </div>
 
       {/* Orders Table */}
@@ -51,14 +53,14 @@ export default function AssignedOrders({ orders = [], onAcceptOrder, onAddTestOr
               <tbody className="divide-y divide-cult-bronze/40">
                 {orders.map((ord) => (
                   <tr key={ord.id} className="hover:bg-cult-charcoal/40 transition-colors">
-                    <td className="p-4 font-mono font-bold text-cult-ember">#{ord.id}</td>
+                    <td className="p-4 font-mono font-bold text-cult-ember">#{ord.orderNumber || ord.id}</td>
                     <td className="p-4 font-body font-bold text-cult-cream">{ord.customerName}</td>
                     <td className="p-4 text-cult-warmgray font-mono">{ord.contact}</td>
                     <td className="p-4 text-cult-cream max-w-xs truncate">{ord.address}</td>
                     <td className="p-4 text-cult-warmgray">{ord.items?.length || 0} items</td>
                     <td className="p-4">
                       <span className="px-2.5 py-1 text-[10px] uppercase font-mono font-bold bg-cult-gold/20 text-cult-gold border border-cult-gold/40">
-                        {ord.paymentStatus || 'Paid'}
+                        {ord.paymentStatus || 'PENDING'}
                       </span>
                     </td>
                     <td className="p-4">
@@ -69,7 +71,7 @@ export default function AssignedOrders({ orders = [], onAcceptOrder, onAddTestOr
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => setSelectedOrder(ord)}
+                          onClick={() => handleView(ord)}
                           className="p-2 text-cult-warmgray hover:text-cult-cream transition-colors"
                           title="View Details"
                         >
@@ -94,10 +96,11 @@ export default function AssignedOrders({ orders = [], onAcceptOrder, onAddTestOr
         )}
       </div>
 
-      {/* Order Detail Modal */}
+      {/* Order Detail Panel */}
       <OrderDetailPanel
-        isOpen={!!selectedOrder}
-        onClose={() => setSelectedOrder(null)}
+        isOpen={!!selectedId}
+        isLoading={orderLoading}
+        onClose={handleClose}
         order={selectedOrder}
         onAccept={onAcceptOrder}
       />

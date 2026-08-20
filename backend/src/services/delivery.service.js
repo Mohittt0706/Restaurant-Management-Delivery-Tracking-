@@ -2,6 +2,39 @@ const prisma = require('../config/prisma');
 const bcrypt = require('bcrypt');
 const { generateInvoiceNumber } = require('../utils/generateInvoice');
 
+const DELIVERY_FLOW = ['ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+const ACTIVE_STATUSES = ['ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'OUT_FOR_DELIVERY'];
+
+// Real fixed location of the restaurant used as pickup point for all deliveries.
+const RESTAURANT_LOCATION = {
+  name: 'CULT Central Kitchen',
+  address: '12th Main Rd, Indiranagar, Bengaluru, Karnataka 560038',
+  latitude: 12.9716,
+  longitude: 77.5946,
+};
+
+function assertTransition(currentStatus, targetStatus) {
+  if (!DELIVERY_FLOW.includes(targetStatus)) {
+    const error = new Error(`Invalid delivery status "${targetStatus}"`);
+    error.statusCode = 400;
+    throw error;
+  }
+  if (currentStatus === targetStatus) {
+    const error = new Error(`Delivery is already in status "${currentStatus}"`);
+    error.statusCode = 400;
+    throw error;
+  }
+  const currentIndex = DELIVERY_FLOW.indexOf(currentStatus);
+  const targetIndex = DELIVERY_FLOW.indexOf(targetStatus);
+  if (currentIndex === -1 || targetIndex !== currentIndex + 1) {
+    const error = new Error(
+      `Invalid status transition from "${currentStatus}" to "${targetStatus}". Must follow: ${DELIVERY_FLOW.join(' → ')}`
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
 class DeliveryService {
   async getDeliveryPartners() {
     return await prisma.user.findMany({
@@ -121,6 +154,98 @@ class DeliveryService {
     });
   }
 
+  // --- DELIVERY PARTNER DASHBOARD ---
+
+  async getDashboard(deliveryPartnerId) {
+    const [assignedOrders, activeDeliveries, outForDelivery, deliveredOrders] = await Promise.all([
+      prisma.delivery.count({ where: { deliveryPartnerId } }),
+      prisma.delivery.count({ where: { deliveryPartnerId, status: { in: ACTIVE_STATUSES } } }),
+      prisma.delivery.count({ where: { deliveryPartnerId, status: 'OUT_FOR_DELIVERY' } }),
+      prisma.delivery.count({ where: { deliveryPartnerId, status: 'DELIVERED' } }),
+    ]);
+
+    return { assignedOrders, activeDeliveries, outForDelivery, deliveredOrders };
+  }
+
+  async getMyOrders(deliveryPartnerId) {
+    return await prisma.delivery.findMany({
+      where: { deliveryPartnerId },
+      include: {
+        order: {
+          include: {
+            user: { select: { id: true, name: true, phone: true } },
+            items: { include: { menuItem: true } },
+            payment: true,
+          },
+        },
+      },
+      orderBy: { assignedAt: 'desc' },
+    });
+  }
+
+  async getMyOrder(orderId, deliveryPartnerId) {
+    const delivery = await prisma.delivery.findFirst({
+      where: { orderId, deliveryPartnerId },
+      include: {
+        deliveryPartner: { select: { id: true, name: true, phone: true } },
+        order: {
+          include: {
+            user: { select: { id: true, name: true, phone: true } },
+            items: { include: { menuItem: true } },
+            payment: true,
+            deliveryAddress: true,
+            statusHistory: { orderBy: { createdAt: 'desc' } },
+          },
+        },
+      },
+    });
+
+    if (!delivery) {
+      const error = new Error('Order not found or not assigned to you');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    return { ...delivery, restaurantLocation: RESTAURANT_LOCATION };
+  }
+
+  async getMyActive(deliveryPartnerId) {
+    const delivery = await prisma.delivery.findFirst({
+      where: { deliveryPartnerId, status: { in: ACTIVE_STATUSES } },
+      include: {
+        deliveryPartner: { select: { id: true, name: true, phone: true } },
+        order: {
+          include: {
+            user: { select: { id: true, name: true, phone: true } },
+            items: { include: { menuItem: true } },
+            payment: true,
+            deliveryAddress: true,
+          },
+        },
+      },
+      orderBy: { assignedAt: 'desc' },
+    });
+
+    if (!delivery) return null;
+
+    return { ...delivery, restaurantLocation: RESTAURANT_LOCATION };
+  }
+
+  async updateMyDeliveryStatus(orderId, deliveryPartnerId, targetStatus) {
+    const delivery = await prisma.delivery.findFirst({
+      where: { orderId, deliveryPartnerId },
+      include: { order: true },
+    });
+
+    if (!delivery) {
+      const error = new Error('Order not found or not assigned to you');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    return this._applyStatusUpdate(delivery, deliveryPartnerId, targetStatus);
+  }
+
   async updateDeliveryStatus(deliveryId, deliveryPartnerId, targetStatus) {
     const delivery = await prisma.delivery.findUnique({
       where: { id: deliveryId },
@@ -138,6 +263,12 @@ class DeliveryService {
       error.statusCode = 403;
       throw error;
     }
+
+    return this._applyStatusUpdate(delivery, deliveryPartnerId, targetStatus);
+  }
+
+  async _applyStatusUpdate(delivery, deliveryPartnerId, targetStatus) {
+    assertTransition(delivery.status, targetStatus);
 
     const now = new Date();
     const updateData = { status: targetStatus };
@@ -159,7 +290,7 @@ class DeliveryService {
     return await prisma.$transaction(async (tx) => {
       // Update delivery record
       const updatedDelivery = await tx.delivery.update({
-        where: { id: deliveryId },
+        where: { id: delivery.id },
         data: updateData,
         include: {
           order: {
