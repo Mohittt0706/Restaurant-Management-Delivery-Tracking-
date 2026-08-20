@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, LogOut } from 'lucide-react';
 import { mobileMenuVariants } from '../../animations/variants';
 import { useCart } from '../../context/CartContext';
 
-export default function MobileMenu({ links, onClose }) {
+export default function MobileMenu({ links, onClose, onLogout }) {
   const { itemCount } = useCart();
 
   return (
@@ -31,6 +31,7 @@ export default function MobileMenu({ links, onClose }) {
           </Link>
         </motion.div>
       ))}
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -49,6 +50,25 @@ export default function MobileMenu({ links, onClose }) {
           )}
         </Link>
       </motion.div>
+
+      {onLogout && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 + (links.length + 1) * 0.08, duration: 0.4 }}
+        >
+          <button
+            onClick={() => {
+              onClose();
+              onLogout();
+            }}
+            className="font-display text-4xl tracking-widest uppercase text-red-400 hover:text-red-300 transition-colors duration-300 inline-flex items-center gap-3 cursor-pointer"
+          >
+            <LogOut size={28} />
+            Logout
+          </button>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
