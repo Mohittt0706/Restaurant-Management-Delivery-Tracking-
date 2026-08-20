@@ -7,9 +7,14 @@ import CartPage from './pages/CartPage';
 import AboutPage from './pages/AboutPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import CheckoutPage from './pages/CheckoutPage';
+import PaymentPage from './pages/PaymentPage';
+import InvoicePage from './pages/InvoicePage';
+import OrderTrackingPage from './pages/OrderTrackingPage';
 import ManagerDashboardPage from './pages/ManagerDashboard/ManagerDashboardPage';
 import DeliveryPartnerDashboardPage from './pages/DeliveryPartnerDashboard/DeliveryPartnerDashboardPage';
 import { CartProvider } from './context/CartContext';
+import { CheckoutProvider } from './context/CheckoutContext';
 import { KitchenProvider } from './context/KitchenContext';
 import KitchenLayout from './pages/kitchen/KitchenLayout';
 import KitchenDashboard from './pages/kitchen/KitchenDashboard';
@@ -37,6 +42,10 @@ function Layout() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/payment" element={<PaymentPage />} />
+        <Route path="/invoice" element={<InvoicePage />} />
+        <Route path="/orders/:id/tracking" element={<OrderTrackingPage />} />
         <Route path="/manager" element={<ManagerDashboardPage />} />
         <Route path="/dashboard" element={<ManagerDashboardPage />} />
         <Route
@@ -63,7 +72,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <CartProvider>
-        <Layout />
+        <CheckoutProvider>
+          <Layout />
+        </CheckoutProvider>
       </CartProvider>
     </BrowserRouter>
   );
