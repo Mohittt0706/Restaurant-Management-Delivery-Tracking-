@@ -1,34 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ShoppingCart, LogOut } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../context/CartContext';
-import { useAuth } from '../../context/AuthContext';
 import MobileMenu from './MobileMenu';
+
+const navLinks = [
+  { label: 'About', to: '/' },
+  { label: 'Menu', to: '/menu' },
+  { label: 'Login', to: '/login' },
+  { label: 'Register', to: '/register' },
+];
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
   const { itemCount } = useCart();
-  const { user, logout } = useAuth();
-
-  const navLinks = [
-    { label: 'About', to: '/' },
-    { label: 'Menu', to: '/menu' },
-    ...(!user
-      ? [
-          { label: 'Login', to: '/login' },
-          { label: 'Register', to: '/register' },
-        ]
-      : []),
-  ];
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -84,16 +72,6 @@ export default function Navbar() {
                   }`} />
                 </Link>
               ))}
-
-              {user && (
-                <button
-                  onClick={handleLogout}
-                  className="font-body text-sm tracking-widest uppercase text-red-400 hover:text-red-300 transition-colors duration-300 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Logout</span>
-                </button>
-              )}
             </div>
 
             {/* Cart + Mobile Toggle */}
@@ -129,7 +107,6 @@ export default function Navbar() {
           <MobileMenu
             links={navLinks}
             onClose={() => setMobileOpen(false)}
-            onLogout={user ? handleLogout : null}
           />
         )}
       </AnimatePresence>
