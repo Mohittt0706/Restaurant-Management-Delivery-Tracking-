@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { NavLink, Outlet, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -10,6 +9,14 @@ import {
   Menu,
   X,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+
+const sectionTitles = {
+  '/kitchen': 'Dashboard Overview',
+  '/kitchen/new-orders': 'New Orders',
+  '/kitchen/preparing': 'Preparing',
+  '/kitchen/ready': 'Ready',
+};
 
 const sidebarLinks = [
   { label: 'Dashboard', to: '/kitchen', icon: LayoutDashboard, end: true },
@@ -21,14 +28,34 @@ const sidebarLinks = [
 export default function KitchenLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
+  const topbarTitle = sectionTitles[location.pathname] || 'Kitchen Dashboard';
 
   const handleLogout = () => {
-    navigate('/login');
+    logout();
+    navigate('/');
   };
 
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user?.role !== 'KITCHEN') {
+    return (
+      <div className="min-h-screen bg-cult-charcoal text-cult-cream flex items-center justify-center font-body">
+        <div className="text-center space-y-3 p-8 bg-cult-espresso border border-cult-bronze">
+          <p className="font-heading text-lg text-cult-ember">Access Restricted</p>
+          <p className="text-xs text-cult-warmgray">
+            This area is only available to KITCHEN accounts. Sign in with a kitchen account to continue.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-screen bg-cult-charcoal">
-      {/* Mobile overlay */}
+    <div className="min-h-screen bg-cult-charcoal text-cult-cream flex font-body">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-40 lg:hidden"
@@ -36,30 +63,21 @@ export default function KitchenLayout() {
         />
       )}
 
-      {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-cult-espresso border-r border-cult-bronze/20 flex flex-col transform transition-transform duration-300 lg:transform-none ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-cult-espresso border-r border-cult-bronze min-h-screen flex flex-col transform transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        {/* Sidebar Header */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-cult-bronze/20">
-          <div className="flex items-center gap-2">
-            <ChefHat size={20} className="text-cult-ember" />
-            <span className="font-display text-xl tracking-widest text-cult-cream">
-              KITCHEN
-            </span>
-          </div>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-cult-warmgray hover:text-cult-cream"
-          >
-            <X size={20} />
-          </button>
+        <div className="h-20 flex items-center px-6 border-b border-cult-bronze">
+          <span className="font-display text-3xl tracking-widest text-cult-cream">
+            CULT
+          </span>
+          <span className="ml-2 px-2 py-0.5 text-[10px] uppercase font-mono font-bold bg-cult-ember/20 text-cult-ember border border-cult-ember/30 rounded">
+            Kitchen
+          </span>
         </div>
 
-        {/* Nav Links */}
-        <nav className="flex-1 py-4 px-3">
+        <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto">
           {sidebarLinks.map((link) => (
             <NavLink
               key={link.to}
@@ -67,47 +85,67 @@ export default function KitchenLayout() {
               end={link.end}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 mb-1 font-body text-sm tracking-wide transition-colors duration-200 ${
+                `flex items-center gap-3.5 px-4 py-3 text-xs uppercase tracking-widest font-body font-medium rounded transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? 'bg-cult-ember/10 text-cult-ember border-l-2 border-cult-ember'
-                    : 'text-cult-warmgray hover:text-cult-cream hover:bg-cult-charcoal/40'
+                    ? 'bg-cult-ember text-cult-cream shadow-lg shadow-cult-ember/20'
+                    : 'text-cult-warmgray hover:text-cult-cream hover:bg-cult-charcoal/50'
                 }`
               }
             >
-              <link.icon size={18} />
-              {link.label}
+              <link.icon className="w-4 h-4 shrink-0" />
+              <span>{link.label}</span>
             </NavLink>
           ))}
         </nav>
 
-        {/* Logout */}
-        <div className="p-3 border-t border-cult-bronze/20">
+        <div className="p-4 border-t border-cult-bronze space-y-2">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 w-full font-body text-sm tracking-wide text-cult-warmgray hover:text-red-400 transition-colors duration-200"
+            className="flex items-center gap-3 px-4 py-3 w-full font-body text-sm tracking-wide text-cult-warmgray hover:text-red-400 transition-colors duration-200 cursor-pointer"
           >
             <LogOut size={18} />
             Logout
           </button>
+          <p className="text-[10px] font-mono text-cult-warmgray/60 uppercase tracking-widest text-center">
+            CULT Kitchen v1.0
+          </p>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <header className="h-16 bg-cult-espresso border-b border-cult-bronze/20 flex items-center justify-between px-6">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-cult-warmgray hover:text-cult-cream"
-          >
-            <Menu size={22} />
-          </button>
-          <div className="flex-1" />
-          <span className="font-display text-xl tracking-widest text-cult-cream">KITCHEN</span>
+      <div className="flex-1 flex flex-col min-w-0 ml-64">
+        <header className="h-20 bg-cult-espresso border-b border-cult-bronze px-8 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden text-cult-warmgray hover:text-cult-cream"
+            >
+              <Menu size={22} />
+            </button>
+            <div>
+              <h1 className="font-heading text-2xl text-cult-cream tracking-wide">
+                {topbarTitle}
+              </h1>
+              <p className="text-xs font-body text-cult-warmgray">
+                Kitchen Control Panel
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden sm:block">
+              <p className="text-xs font-body font-medium text-cult-cream uppercase tracking-wider">
+                Restaurant Kitchen
+              </p>
+              <p className="text-[10px] font-mono text-cult-warmgray">
+                CULT Kitchen
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-cult-charcoal border border-cult-bronze flex items-center justify-center text-cult-ember shadow-md">
+              <ChefHat className="w-5 h-5" />
+            </div>
+          </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 p-8 overflow-y-auto">
           <Outlet />
         </main>
       </div>

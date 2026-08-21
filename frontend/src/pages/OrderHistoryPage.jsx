@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Loader2, Package, Clock, CheckCircle2, Truck, XCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Package, Clock, CheckCircle2, Truck, XCircle, FileText } from 'lucide-react';
 import { getMyOrders } from '../services/orderService';
 import { useAuth } from '../context/AuthContext';
 import Footer from '../components/Footer/Footer';
@@ -172,6 +172,15 @@ export default function OrderHistoryPage() {
                       <span className="font-body text-sm font-semibold text-cult-cream">
                         ₹{order.totalAmount}
                       </span>
+                      {order.paymentStatus === 'PAID' && (
+                        <Link
+                          to={`/invoice/${order.id}`}
+                          className="font-body text-xs tracking-widest uppercase px-4 py-2 border border-cult-gold text-cult-gold hover:bg-cult-gold hover:text-cult-charcoal transition-all duration-300 flex items-center gap-1.5"
+                        >
+                          <FileText size={12} />
+                          Invoice
+                        </Link>
+                      )}
                       {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
                         <Link
                           to={`/orders/${order.id}/tracking`}

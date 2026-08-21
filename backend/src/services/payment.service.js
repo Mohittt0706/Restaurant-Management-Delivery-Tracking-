@@ -32,6 +32,7 @@ class PaymentService {
 
     const amountInPaise = Math.round(order.totalAmount * 100);
     let razorpayOrderId = null;
+    const isMock = !razorpayInstance;
 
     if (razorpayInstance) {
       try {
@@ -49,7 +50,7 @@ class PaymentService {
         throw error;
       }
     } else {
-      razorpayOrderId = 'rzp_order_' + Date.now() + Math.floor(100 + Math.random() * 900);
+      razorpayOrderId = 'rzp_mock_' + Date.now() + Math.floor(100 + Math.random() * 900);
     }
 
     await prisma.payment.upsert({
@@ -69,11 +70,25 @@ class PaymentService {
       },
     });
 
+    if (isMock) {
+      await prisma.$transaction(async (tx) => {
+        await tx.payment.update({
+          where: { orderId },
+          data: { status: 'PAID', transactionId: razorpayOrderId },
+        });
+        await tx.order.update({
+          where: { id: orderId },
+          data: { paymentStatus: 'PAID', status: 'CONFIRMED' },
+        });
+      });
+    }
+
     return {
       razorpayOrderId,
       amount: amountInPaise,
       currency: 'INR',
       keyId: RAZORPAY_KEY_ID,
+      isMock,
     };
   }
 

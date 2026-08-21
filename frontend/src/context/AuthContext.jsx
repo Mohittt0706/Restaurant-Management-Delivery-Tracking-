@@ -48,9 +48,9 @@ export function AuthProvider({ children }) {
   const register = useCallback(async ({ name, phone, email, password }) => {
     setLoading(true);
     try {
-      const result = await authService.register({ name, phone, email, password });
-      persistAuth(result.token, result.user);
-      return result.user;
+      const { data } = await authService.register({ name, phone, email, password });
+      persistAuth(data.token, data.user);
+      return data.user;
     } finally {
       setLoading(false);
     }

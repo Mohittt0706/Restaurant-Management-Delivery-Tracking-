@@ -65,6 +65,14 @@ export default function PaymentPage() {
       if (method === 'RAZORPAY') {
         const rpOrder = await createRazorpayOrder(order.id);
 
+        if (rpOrder.isMock) {
+          const invoiceData = await getInvoiceData(order.id);
+          setInvoiceData(invoiceData);
+          resetCart();
+          navigate('/invoice');
+          return;
+        }
+
         const options = {
           key: rpOrder.keyId,
           amount: rpOrder.amount,

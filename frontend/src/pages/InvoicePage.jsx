@@ -48,12 +48,20 @@ export default function InvoicePage() {
         <div className="text-center max-w-md mx-auto px-6">
           <p className="font-heading text-xl text-cult-cream mb-2">{error || 'No invoice data found.'}</p>
           <p className="font-body text-cult-warmgray mb-8">Place an order to view your invoice.</p>
-          <Link
-            to="/menu"
-            className="font-body text-sm tracking-widest uppercase text-cult-cream bg-cult-ember px-8 py-3.5 hover:bg-cult-deep-red transition-colors duration-300 inline-block"
-          >
-            Browse Menu
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              to="/menu"
+              className="font-body text-sm tracking-widest uppercase text-cult-cream bg-cult-ember px-8 py-3.5 hover:bg-cult-deep-red transition-colors duration-300 inline-block"
+            >
+              Browse Menu
+            </Link>
+            <Link
+              to="/order-history"
+              className="font-body text-sm tracking-widest uppercase text-cult-cream border border-cult-bronze px-8 py-3.5 hover:border-cult-warmgray transition-colors duration-300 inline-block"
+            >
+              Order History
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -103,7 +111,7 @@ export default function InvoicePage() {
                 <span style="color:#A89E92;">Invoice:</span> <span style="color:#F5EFE6;font-weight:600;">${invoiceData.invoiceNumber}</span>
               </div>
               <div>
-                <span style="color:#A89E92;">Order:</span> <span style="color:#E8642C;font-weight:600;">#${invoiceData.orderNumber || orderId}</span>
+                <span style="color:#A89E92;">Order:</span> <span style="color:#E8642C;font-weight:600;">#${invoiceData.orderNumber || invoiceData.orderId}</span>
               </div>
             </div>
 
@@ -283,7 +291,7 @@ export default function InvoicePage() {
                 <span>{downloading ? 'Downloading...' : 'Download PDF'}</span>
               </button>
               <Link
-                to={`/orders/${orderId}/tracking`}
+                to={`/orders/${invoiceData.orderId || targetOrderId}/tracking`}
                 className="flex-1 py-3 border border-cult-bronze text-cult-cream uppercase text-xs font-body tracking-widest hover:border-cult-warmgray text-center"
               >
                 Track Order

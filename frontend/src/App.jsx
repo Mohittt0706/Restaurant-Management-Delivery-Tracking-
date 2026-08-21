@@ -18,6 +18,7 @@ import { AuthProvider } from './context/AuthContext';
 import { CheckoutProvider } from './context/CheckoutContext';
 import { KitchenProvider } from './context/KitchenContext';
 import OrderHistoryPage from './pages/OrderHistoryPage';
+import ProfilePage from './pages/ProfilePage';
 import KitchenLayout from './pages/kitchen/KitchenLayout';
 import KitchenDashboard from './pages/kitchen/KitchenDashboard';
 import KitchenNewOrders from './pages/kitchen/KitchenNewOrders';
@@ -50,6 +51,7 @@ function Layout() {
         <Route path="/invoice/:orderId" element={<InvoicePage />} />
         <Route path="/orders/:id/tracking" element={<OrderTrackingPage />} />
         <Route path="/order-history" element={<OrderHistoryPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/manager" element={<ManagerDashboardPage />} />
         <Route path="/dashboard" element={<ManagerDashboardPage />} />
         <Route
